@@ -149,7 +149,7 @@ function renderOptions(mode) {
         <button class="soft-button small ghost" data-action="home">戻る</button>
       </div>
       <div class="panel">
-        <h2>出題の向き</h2>
+        <h2>出題スタイル</h2>
         <div class="segmented" data-option-group="direction">
           <button class="option-button ${state.direction === "codeToSubject" ? "is-selected" : ""}" data-direction="codeToSubject">NDC→主題</button>
           <button class="option-button ${state.direction === "subjectToCode" ? "is-selected" : ""}" data-direction="subjectToCode">主題→NDC</button>
@@ -391,7 +391,9 @@ function resultSpeech(score) {
 
 function shareToX() {
   const score = state.quiz?.correct || 0;
-  const text = `${APP_NAME}のクイズモードで${QUIZ_LENGTH}問中${score}問正解しました！\n${APP_NAME}`;
+  const directionLabel = state.direction === "codeToSubject" ? "NDC→主題" : "主題→NDC";
+  const divisionLabel = state.division === "secondary" ? "二次区分" : "三次区分";
+  const text = `${APP_NAME}のクイズモード（${directionLabel} / ${divisionLabel}）で${QUIZ_LENGTH}問中${score}問正解しました！\n${APP_NAME}`;
   const url = new URL("https://twitter.com/intent/tweet");
   url.searchParams.set("text", text);
   url.searchParams.set("url", location.origin + location.pathname);
