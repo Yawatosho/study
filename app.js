@@ -3,6 +3,7 @@ const STORAGE_KEY = "ndcQuizRecordsV1";
 const QUIZ_LENGTH = 10;
 const QUESTION_SECONDS = 10;
 const MAX_MISTAKES = 20;
+const NDC_DIGIT_OPTIONS = ["any", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 const AUDIO = {
   pon: "pon.mp3",
@@ -20,6 +21,7 @@ const AUDIO = {
 };
 
 const app = document.querySelector("#app");
+const ndcDrumScrollTimers = new Map();
 
 const state = {
   ndc: [],
@@ -28,6 +30,7 @@ const state = {
   direction: "codeToSubject",
   division: "secondary",
   selectedClasses: new Set(),
+  ndcFilters: ["any", "any", "any"],
   quiz: null,
   timerId: null,
   remaining: QUESTION_SECONDS,
@@ -113,10 +116,13 @@ function renderHome() {
         <h1 class="title">${APP_NAME}</h1>
       </div>
       <img class="hero-character" src="quiz_chara_1.png" alt="">
-      <div class="menu-stack">
-        <button class="soft-button primary" data-action="quiz-options">クイズモード</button>
+      <div class="menu-stack home-menu">
+        <button class="soft-button" data-action="quiz-options">クイズモード</button>
         <button class="soft-button" data-action="training-options">トレーニングモード</button>
-        <button class="soft-button accent" data-action="records">これまでの記録</button>
+        <div class="home-action-row">
+          <button class="soft-button" data-action="records">これまでの記録</button>
+          <button class="soft-button" data-action="ndc-lookup">NDCを確認</button>
+        </div>
         <div class="home-credit" aria-label="クレジット">
           <span>音声：効果音ラボ</span>
           <span>NDC：日本図書館協会</span>
@@ -427,6 +433,150 @@ function statCard(label, value) {
   return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>`;
 }
 
+function renderNdcLookup() {
+  setView("ndc-lookup");
+  const filtered = getFilteredNdc();
+  app.innerHTML = `
+    <section class="screen scroll-screen ndc-lookup-screen">
+      <div class="top-bar">
+        <h1 class="section-title">NDCを確認</h1>
+        <button class="soft-button small ghost" data-action="home">戻る</button>
+      </div>
+      <div class="ndc-filter-panel">
+        <div class="ndc-drum-grid">
+          ${state.ndcFilters.map((value, index) => renderNdcDrum(index, value)).join("")}
+        </div>
+      </div>
+      <div class="ndc-result-heading">
+        <span>分類番号</span>
+        <span class="ndc-result-count">該当 ${filtered.length}件</span>
+      </div>
+      <div class="ndc-table-wrap">
+        ${renderNdcTable(filtered)}
+      </div>
+    </section>
+  `;
+  requestAnimationFrame(syncNdcDrums);
+}
+
+function renderNdcDrum(index, value) {
+  const labels = ["百の位", "十の位", "一の位"];
+  return `
+    <div class="ndc-drum-control">
+      <div class="ndc-drum" aria-label="${labels[index]}">
+        <div class="ndc-drum-highlight" aria-hidden="true"></div>
+        <div class="ndc-drum-options" data-ndc-digit="${index}">
+          ${NDC_DIGIT_OPTIONS.map((option) => `
+            <button
+              type="button"
+              class="ndc-drum-option ${option === value ? "is-selected" : ""}"
+              data-ndc-digit="${index}"
+              data-ndc-choice="${option}"
+              aria-pressed="${option === value ? "true" : "false"}"
+            >${option}</button>
+          `).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getFilteredNdc() {
+  return state.ndc.filter((item) => {
+    return state.ndcFilters.every((digit, index) => digit === "any" || item.ndc[index] === digit);
+  });
+}
+
+function updateNdcLookup() {
+  const screen = app.querySelector(".ndc-lookup-screen");
+  if (!screen) return;
+  for (const [index, value] of state.ndcFilters.entries()) {
+    const label = screen.querySelector(`[data-ndc-value="${index}"]`);
+    if (label) label.textContent = value;
+  }
+  const filtered = getFilteredNdc();
+  const count = screen.querySelector(".ndc-result-count");
+  const tableWrap = screen.querySelector(".ndc-table-wrap");
+  if (count) count.textContent = `該当 ${filtered.length}件`;
+  if (tableWrap) tableWrap.innerHTML = renderNdcTable(filtered);
+}
+
+function syncNdcDrums() {
+  app.querySelectorAll(".ndc-drum-options").forEach((drum) => syncNdcDrumElement(drum));
+}
+
+function syncNdcDrum(digitIndex) {
+  const drum = app.querySelector(`.ndc-drum-options[data-ndc-digit="${digitIndex}"]`);
+  if (drum) syncNdcDrumElement(drum);
+}
+
+function syncNdcDrumElement(drum) {
+  const digitIndex = Number(drum.dataset.ndcDigit);
+  const value = state.ndcFilters[digitIndex];
+  const selectedOption = drum.querySelector(`[data-ndc-choice="${value}"]`);
+  updateNdcDrumSelection(digitIndex);
+  if (!selectedOption) return;
+  drum.scrollTop = selectedOption.offsetTop - (drum.clientHeight - selectedOption.clientHeight) / 2;
+}
+
+function updateNdcDrumSelection(digitIndex) {
+  const value = state.ndcFilters[digitIndex];
+  const valueLabel = app.querySelector(`[data-ndc-value="${digitIndex}"]`);
+  if (valueLabel) valueLabel.textContent = value;
+  app.querySelectorAll(`.ndc-drum-option[data-ndc-digit="${digitIndex}"]`).forEach((option) => {
+    const isSelected = option.dataset.ndcChoice === value;
+    option.classList.toggle("is-selected", isSelected);
+    option.setAttribute("aria-pressed", String(isSelected));
+  });
+}
+
+function getCenteredDrumChoice(drum) {
+  const options = Array.from(drum.querySelectorAll(".ndc-drum-option"));
+  const center = drum.scrollTop + drum.clientHeight / 2;
+  let closestOption = options[0];
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const option of options) {
+    const optionCenter = option.offsetTop + option.offsetHeight / 2;
+    const distance = Math.abs(optionCenter - center);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestOption = option;
+    }
+  }
+  return closestOption?.dataset.ndcChoice || "any";
+}
+
+function handleNdcDrumScroll(drum) {
+  const digitIndex = Number(drum.dataset.ndcDigit);
+  window.clearTimeout(ndcDrumScrollTimers.get(digitIndex));
+  ndcDrumScrollTimers.set(digitIndex, window.setTimeout(() => {
+    const nextValue = getCenteredDrumChoice(drum);
+    if (state.ndcFilters[digitIndex] !== nextValue) {
+      state.ndcFilters[digitIndex] = nextValue;
+      updateNdcLookup();
+      updateNdcDrumSelection(digitIndex);
+    }
+  }, 100));
+}
+
+function renderNdcTable(items) {
+  if (!items.length) return `<div class="empty">該当する分類はありません</div>`;
+  return `
+    <div class="ndc-table" role="table" aria-label="NDC分類表">
+      <div class="ndc-table-row ndc-table-head" role="row">
+        <div role="columnheader">分類番号</div>
+        <div role="columnheader">分類の内容</div>
+      </div>
+      ${items.map((item) => `
+        <div class="ndc-table-row" role="row">
+          <div class="ndc-code-cell" role="cell">${escapeHtml(item.ndc)}</div>
+          <div role="cell">${escapeHtml(item.subject)}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderMistakes() {
   setView("mistakes");
   const records = readRecords();
@@ -543,6 +693,13 @@ app.addEventListener("click", (event) => {
     renderOptions("training");
     return;
   }
+  if (target.dataset.ndcChoice) {
+    const digitIndex = Number(target.dataset.ndcDigit);
+    state.ndcFilters[digitIndex] = target.dataset.ndcChoice;
+    updateNdcLookup();
+    syncNdcDrum(digitIndex);
+    return;
+  }
   if (target.dataset.answer) {
     answerQuestion(target.dataset.answer, false, {
       x: event.clientX,
@@ -555,6 +712,7 @@ app.addEventListener("click", (event) => {
   if (action === "quiz-options") renderOptions("quiz");
   if (action === "training-options") renderOptions("training");
   if (action === "records") renderRecords();
+  if (action === "ndc-lookup") renderNdcLookup();
   if (action === "mistakes") renderMistakes();
   if (action === "start-quiz") startQuiz("quiz");
   if (action === "start-training") startQuiz("training");
@@ -562,5 +720,11 @@ app.addEventListener("click", (event) => {
   if (action === "quit-quiz") renderHome();
   if (action === "share-x") shareToX();
 });
+
+app.addEventListener("scroll", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element) || !target.matches(".ndc-drum-options")) return;
+  handleNdcDrumScroll(target);
+}, true);
 
 init();
