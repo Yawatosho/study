@@ -1,4 +1,4 @@
-const APP_NAME = "NDCクイズ";
+const APP_NAME = "司書さんと覚える日本十進分類";
 const STORAGE_KEY = "ndcQuizRecordsV1";
 const QUIZ_LENGTH = 10;
 const QUESTION_SECONDS = 10;
@@ -367,10 +367,20 @@ function finishQuiz() {
 }
 
 function resultSpeech(score) {
-  if (score <= 2) return "ゆっくりで大丈夫。まずは数字の雰囲気からなじんでいこう。";
-  if (score <= 5) return "いい調子。知っている棚が少しずつ増えてきたね。";
-  if (score <= 8) return "かなり身についてきたよ。あと少しで分類名人。";
-  return "すばらしい！本の住所をしっかり案内できそう。";
+  const speeches = [
+    "はじめの一歩です。ゆっくり覚えていきましょう♪",
+    "ちゃんとできています。少しずつ増やしていきましょう♪",
+    "また挑戦してみましょう。少しずつ覚えれば大丈夫です♪",
+    "コツをつかめば、もっと正解できますよ♪",
+    "いい調子です！次は半分超えをめざしましょう！",
+    "大丈夫です。次はもっと正解できますよ♪",
+    "かなり覚えられています！次はもっと上を目指せますよ♪",
+    "すごいです！しっかり身についてきましたね♪",
+    "すごいです！たくさん覚えられましたね♪",
+    "すばらしいです！満点までもうひと息です♪",
+    "満点です！素晴らしいです♪",
+  ];
+  return speeches[score] || speeches[0];
 }
 
 function shareToX() {
