@@ -117,6 +117,12 @@ function renderHome() {
         <button class="soft-button primary" data-action="quiz-options">クイズモード</button>
         <button class="soft-button" data-action="training-options">トレーニングモード</button>
         <button class="soft-button accent" data-action="records">これまでの記録</button>
+        <div class="home-credit" aria-label="クレジット">
+          <span>音声：効果音ラボ</span>
+          <span>NDC：日本図書館協会</span>
+          <span>作成：やわらか図書館学</span>
+          <span>画像・コーディングにAIを使用</span>
+        </div>
       </div>
     </section>
   `;
