@@ -250,6 +250,7 @@ function renderQuestion(feedback = "") {
   const item = state.quiz.activeItem;
   const answers = state.quiz.activeAnswers;
   const question = state.direction === "codeToSubject" ? item.ndc : item.subject;
+  const questionClass = state.direction === "codeToSubject" ? "code-question" : "subject-question";
   const kicker = state.direction === "codeToSubject" ? "このNDCの主題は？" : "この主題のNDCは？";
   const character = feedback === "correct" ? "quiz_chara_ok.png" : feedback === "wrong" ? "quiz_chara_ng.png" : `quiz_chara_${randomInt(1, 4)}.png`;
 
@@ -264,7 +265,7 @@ function renderQuestion(feedback = "") {
       </div>
       <div class="question-card">
         <div class="question-kicker">${kicker}</div>
-        <div class="question-text">${escapeHtml(question)}</div>
+        <div class="question-text ${questionClass}">${escapeHtml(question)}</div>
       </div>
       <div class="answer-grid">
         ${answers.map((answer) => {
@@ -386,7 +387,7 @@ function renderRecords() {
   const records = readRecords();
   const rate = records.quiz.total ? Math.round((records.quiz.correct / records.quiz.total) * 100) : 0;
   app.innerHTML = `
-    <section class="screen">
+    <section class="screen scroll-screen records-screen">
       <div class="top-bar">
         <h1 class="section-title">これまでの記録</h1>
         <button class="soft-button small ghost" data-action="home">戻る</button>
@@ -420,7 +421,7 @@ function renderMistakes() {
   setView("mistakes");
   const records = readRecords();
   app.innerHTML = `
-    <section class="screen">
+    <section class="screen scroll-screen mistakes-screen">
       <div class="top-bar">
         <h1 class="section-title">間違えた問題</h1>
         <button class="soft-button small ghost" data-action="training-options">戻る</button>
