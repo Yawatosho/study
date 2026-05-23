@@ -282,7 +282,6 @@ function renderQuestion(feedback = "") {
           return `<button class="answer-button${className}" data-answer="${answer.ndc}" ${state.quiz.answered ? "disabled" : ""}>${escapeHtml(value)}</button>`;
         }).join("")}
       </div>
-      <div class="feedback">${feedbackText(feedback, item)}</div>
       <img class="quiz-character" src="${character}" alt="">
       <div class="button-row">
         <button class="soft-button small ghost" data-action="${state.mode === "quiz" ? "quit-quiz" : "training-options"}">やめる</button>
@@ -324,12 +323,6 @@ function showAnswerFloat(text, isCorrect, point) {
   marker.style.top = `${point.y}px`;
   screen.append(marker);
   marker.addEventListener("animationend", () => marker.remove(), { once: true });
-}
-
-function feedbackText(feedback, item) {
-  if (feedback === "correct") return "正解！";
-  if (feedback === "wrong") return `答えは ${item.ndc}：${escapeHtml(item.subject)}`;
-  return "";
 }
 
 function finishQuiz() {
