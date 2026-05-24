@@ -174,8 +174,19 @@ function playSound(src, channel = "se") {
   audio.play().catch(() => {});
 }
 
-function playButtonSound() {
-  if (state.view !== "quiz") playSound(AUDIO.pon, "se");
+function playButtonSound(target) {
+  if (!shouldPlayButtonSound(target)) return;
+  playSound(AUDIO.pon, "se");
+}
+
+function shouldPlayButtonSound(target) {
+  if (state.view === "quiz") return false;
+  const action = target.dataset.action;
+  if (target.dataset.gallerySrc || action === "close-gallery-preview") return false;
+  if (state.view === "quiz-options" || state.view === "training-options") {
+    return action === "start-quiz" || action === "start-training";
+  }
+  return true;
 }
 
 async function init() {
@@ -875,7 +886,7 @@ app.addEventListener("click", (event) => {
   const target = event.target.closest("button");
   if (!target) return;
 
-  playButtonSound();
+  playButtonSound(target);
 
   const action = target.dataset.action;
   if (target.dataset.direction) {
