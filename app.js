@@ -4,6 +4,17 @@ const QUIZ_LENGTH = 10;
 const QUESTION_SECONDS = 10;
 const MAX_MISTAKES = 20;
 const NDC_DIGIT_OPTIONS = ["any", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const GA_VIEW_TITLES = {
+  home: "ホーム",
+  "quiz-options": "クイズ設定",
+  "training-options": "トレーニング設定",
+  quiz: "出題",
+  result: "結果",
+  records: "これまでの記録",
+  "ndc-lookup": "NDCを確認",
+  mistakes: "間違えた問題",
+  notice: "お知らせ",
+};
 
 const AUDIO = {
   pon: "pon.mp3",
@@ -22,6 +33,7 @@ const AUDIO = {
 
 const app = document.querySelector("#app");
 const ndcDrumScrollTimers = new Map();
+let lastTrackedPageView = null;
 
 const state = {
   ndc: [],
@@ -74,6 +86,25 @@ function writeRecords(records) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 }
 
+function trackPageView(view) {
+  if (lastTrackedPageView === view) return;
+  lastTrackedPageView = view;
+  if (typeof window.gtag !== "function") return;
+
+  const pageUrl = new URL(window.location.href);
+  pageUrl.hash = view;
+  window.gtag("event", "page_view", {
+    page_title: `${APP_NAME} | ${GA_VIEW_TITLES[view] || view}`,
+    page_location: pageUrl.href,
+    page_path: `${window.location.pathname}${window.location.search}#${view}`,
+  });
+}
+
+function trackEvent(eventName, params = {}) {
+  if (typeof window.gtag !== "function") return;
+  window.gtag("event", eventName, params);
+}
+
 function playSound(src, channel = "se") {
   if (!src) return;
   const current = state.audioChannels[channel];
@@ -105,6 +136,7 @@ function setView(view) {
   clearQuestionTimer();
   state.view = view;
   window.scrollTo({ top: 0, behavior: "instant" });
+  trackPageView(view);
 }
 
 function renderHome() {
@@ -203,6 +235,12 @@ function startQuiz(mode) {
     startedAt: Date.now(),
   };
 
+  trackEvent(mode === "quiz" ? "quiz_start" : "training_start", {
+    question_direction: state.direction,
+    ndc_division: state.division,
+    selected_class_count: state.selectedClasses.size,
+  });
+
   if (mode === "training") {
     const records = readRecords();
     records.training.plays += 1;
@@ -223,7 +261,7 @@ function getPool() {
 
 function nextQuestion() {
   clearQuestionTimer();
-  state.view = "quiz";
+  setView("quiz");
   if (state.mode === "quiz" && state.quiz.answered) {
     state.quiz.current += 1;
   }
@@ -327,7 +365,7 @@ function showAnswerFloat(text, isCorrect, point) {
 
 function finishQuiz() {
   clearQuestionTimer();
-  state.view = "result";
+  setView("result");
   const score = state.quiz.correct;
   const records = readRecords();
   records.quiz.plays += 1;
@@ -349,6 +387,14 @@ function finishQuiz() {
     high: "quiz_result_6-8.png",
     perfect: "quiz_result_9-10.png",
   }[resultKey];
+
+  trackEvent("quiz_finish", {
+    score,
+    total_questions: QUIZ_LENGTH,
+    question_direction: state.direction,
+    ndc_division: state.division,
+    result_rank: resultKey,
+  });
 
   app.innerHTML = `
     <section class="screen result-screen">
@@ -390,6 +436,11 @@ function shareToX() {
   const url = new URL("https://twitter.com/intent/tweet");
   url.searchParams.set("text", text);
   url.searchParams.set("url", location.origin + location.pathname);
+  trackEvent("share", {
+    method: "X",
+    content_type: "quiz_result",
+    item_id: `${score}-${QUIZ_LENGTH}`,
+  });
   window.open(url.toString(), "_blank", "noopener,noreferrer");
 }
 
@@ -609,6 +660,7 @@ function saveMistake(item) {
 }
 
 function showNotice(message, back) {
+  setView("notice");
   app.innerHTML = `
     <section class="screen">
       <h1 class="section-title">お知らせ</h1>
