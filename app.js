@@ -4,6 +4,31 @@ const QUIZ_LENGTH = 10;
 const QUESTION_SECONDS = 10;
 const MAX_MISTAKES = 20;
 const NDC_DIGIT_OPTIONS = ["any", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const QUIZ_CHARACTERS = [
+  { src: "quiz_chara_1.png", label: "司書さん 1" },
+  { src: "quiz_chara_2.png", label: "司書さん 2" },
+  { src: "quiz_chara_3.png", label: "司書さん 3" },
+  { src: "quiz_chara_4.png", label: "司書さん 4" },
+  { src: "quiz_chara_5.png", label: "司書さん 5" },
+  { src: "quiz_chara_6.png", label: "司書さん 6" },
+  { src: "quiz_chara_ok.png", label: "正解の司書さん" },
+  { src: "quiz_chara_ng.png", label: "不正解の司書さん" },
+];
+const QUIZ_RESULTS = [
+  { src: "quiz_result_0-2.png", label: "0〜2点の結果" },
+  { src: "quiz_result_3-5.png", label: "3〜5点の結果" },
+  { src: "quiz_result_6-8.png", label: "6〜8点の結果" },
+  { src: "quiz_result_9.png", label: "9点の結果" },
+  { src: "quiz_result_10.png", label: "10点の結果" },
+];
+const QUIZ_HARD_RESULTS = [
+  { src: "quiz_result_hard_0-2.png", label: "激ムズ0〜2点の結果" },
+  { src: "quiz_result_hard_3-5.png", label: "激ムズ3〜5点の結果" },
+  { src: "quiz_result_hard_6-8.png", label: "激ムズ6〜8点の結果" },
+  { src: "quiz_result_hard_9.png", label: "激ムズ9点の結果" },
+  { src: "quiz_result_hard_10.png", label: "激ムズ10点の結果" },
+];
+const GALLERY_ITEMS = [...QUIZ_CHARACTERS, ...QUIZ_RESULTS, ...QUIZ_HARD_RESULTS];
 const GA_VIEW_TITLES = {
   home: "ホーム",
   "quiz-options": "クイズ設定",
@@ -11,6 +36,7 @@ const GA_VIEW_TITLES = {
   quiz: "出題",
   result: "結果",
   records: "これまでの記録",
+  gallery: "ギャラリー",
   "ndc-lookup": "NDCを確認",
   mistakes: "間違えた問題",
   notice: "お知らせ",
@@ -21,6 +47,11 @@ const AUDIO = {
   modeSelect: "mode_select.mp3",
   training: "training.mp3",
   ok: "ok.mp3",
+  okStreaks: {
+    3: "ok_3.mp3",
+    6: "ok_6.mp3",
+    9: "ok_9.mp3",
+  },
   ng: "ng.mp3",
   questions: Array.from({ length: QUIZ_LENGTH }, (_, index) => `q${index + 1}.mp3`),
   results: {
@@ -41,6 +72,7 @@ const state = {
   mode: "quiz",
   direction: "codeToSubject",
   division: "secondary",
+  hardMode: false,
   selectedClasses: new Set(),
   ndcFilters: ["any", "any", "any"],
   quiz: null,
@@ -61,6 +93,9 @@ const defaultRecords = {
     byClass: Object.fromEntries(Array.from({ length: 10 }, (_, index) => [String(index), 0])),
   },
   mistakes: [],
+  gallery: {
+    seenImages: [],
+  },
 };
 
 function readRecords() {
@@ -79,11 +114,28 @@ function mergeRecords(records) {
       byClass: { ...defaultRecords.training.byClass, ...(records.training?.byClass || {}) },
     },
     mistakes: Array.isArray(records.mistakes) ? records.mistakes.slice(0, MAX_MISTAKES) : [],
+    gallery: {
+      seenImages: getStoredSeenImages(records).filter((src) => GALLERY_ITEMS.some((item) => item.src === src)),
+    },
   };
+}
+
+function getStoredSeenImages(records) {
+  if (Array.isArray(records.gallery?.seenImages)) return records.gallery.seenImages;
+  if (Array.isArray(records.gallery?.seenCharacters)) return records.gallery.seenCharacters;
+  return [];
 }
 
 function writeRecords(records) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+function unlockGalleryItem(src) {
+  if (!GALLERY_ITEMS.some((item) => item.src === src)) return;
+  const records = readRecords();
+  if (records.gallery.seenImages.includes(src)) return;
+  records.gallery.seenImages.push(src);
+  writeRecords(records);
 }
 
 function trackPageView(view) {
@@ -141,6 +193,7 @@ function setView(view) {
 
 function renderHome() {
   setView("home");
+  unlockGalleryItem("quiz_chara_1.png");
   app.innerHTML = `
     <section class="screen home">
       <div class="brand">
@@ -148,6 +201,7 @@ function renderHome() {
         <h1 class="title">${APP_NAME}</h1>
       </div>
       <img class="hero-character" src="quiz_chara_1.png" alt="">
+      <button class="hero-face-hotspot" data-action="gallery" aria-label="ギャラリーを開く"></button>
       <div class="menu-stack home-menu">
         <button class="soft-button" data-action="quiz-options">クイズモード</button>
         <button class="soft-button" data-action="training-options">トレーニングモード</button>
@@ -193,6 +247,13 @@ function renderOptions(mode) {
           <button class="option-button ${state.division === "secondary" ? "is-selected" : ""}" data-division="secondary">二次区分</button>
           <button class="option-button ${state.division === "tertiary" ? "is-selected" : ""}" data-division="tertiary">三次区分</button>
         </div>
+        <label class="check-option">
+          <input type="checkbox" data-hard-mode ${state.hardMode ? "checked" : ""}>
+          <span class="check-option-text" tabindex="0">
+            激ムズ
+            <span class="option-tooltip" role="tooltip">選択肢がすべて同じ類から出題されるようになります</span>
+          </span>
+        </label>
       </div>
       ${isTraining ? renderClassSelector() : ""}
       <div class="menu-stack">
@@ -219,25 +280,29 @@ function renderClassSelector() {
 
 function startQuiz(mode) {
   const pool = getPool();
-  if (pool.length < 4) {
+  const playablePool = state.hardMode ? getHardModePool(pool) : pool;
+  if (playablePool.length < 4) {
     showNotice("選べるNDCが少なすぎます。出題範囲を広げてください。", () => renderOptions(mode));
     return;
   }
 
   state.mode = mode;
   state.quiz = {
-    questions: mode === "quiz" ? sample(pool, Math.min(QUIZ_LENGTH, pool.length)) : [],
+    questions: mode === "quiz" ? sample(playablePool, Math.min(QUIZ_LENGTH, playablePool.length)) : [],
     current: 0,
     correct: 0,
+    streak: 0,
+    hardMode: state.hardMode,
     answered: false,
     activeItem: null,
-    pool,
+    pool: playablePool,
     startedAt: Date.now(),
   };
 
   trackEvent(mode === "quiz" ? "quiz_start" : "training_start", {
     question_direction: state.direction,
     ndc_division: state.division,
+    hard_mode: state.hardMode,
     selected_class_count: state.selectedClasses.size,
   });
 
@@ -257,6 +322,15 @@ function getPool() {
     const classOk = state.mode !== "training" || state.selectedClasses.has(item.ndc[0]);
     return divisionOk && classOk;
   });
+}
+
+function getHardModePool(pool) {
+  const countsByClass = pool.reduce((counts, item) => {
+    const classKey = item.ndc[0];
+    counts[classKey] = (counts[classKey] || 0) + 1;
+    return counts;
+  }, {});
+  return pool.filter((item) => countsByClass[item.ndc[0]] >= 4);
 }
 
 function nextQuestion() {
@@ -296,7 +370,8 @@ function renderQuestion(feedback = "") {
   const question = state.direction === "codeToSubject" ? item.ndc : item.subject;
   const questionClass = state.direction === "codeToSubject" ? "code-question" : "subject-question";
   const kicker = state.direction === "codeToSubject" ? "このNDCの主題は？" : "この主題のNDCは？";
-  const character = feedback === "correct" ? "quiz_chara_ok.png" : feedback === "wrong" ? "quiz_chara_ng.png" : `quiz_chara_${randomInt(1, 4)}.png`;
+  const character = feedback === "correct" ? "quiz_chara_ok.png" : feedback === "wrong" ? "quiz_chara_ng.png" : `quiz_chara_${randomInt(1, 6)}.png`;
+  unlockGalleryItem(character);
 
   app.innerHTML = `
     <section class="screen quiz-screen">
@@ -330,7 +405,11 @@ function renderQuestion(feedback = "") {
 }
 
 function makeAnswers(correctItem) {
-  const others = state.quiz.pool.filter((item) => item.ndc !== correctItem.ndc);
+  const others = state.quiz.pool.filter((item) => {
+    const isDifferentItem = item.ndc !== correctItem.ndc;
+    const isSameClass = !state.hardMode || item.ndc[0] === correctItem.ndc[0];
+    return isDifferentItem && isSameClass;
+  });
   return shuffle([correctItem, ...sample(others, 3)]);
 }
 
@@ -343,12 +422,20 @@ function answerQuestion(answerNdc, timedOut = false, floatPoint = null) {
   state.quiz.selectedAnswer = answerNdc;
   if (isCorrect) {
     state.quiz.correct += 1;
+    state.quiz.streak += 1;
   } else {
+    state.quiz.streak = 0;
     saveMistake(item);
   }
   renderQuestion(isCorrect ? "correct" : "wrong");
   if (floatPoint) showAnswerFloat(isCorrect ? "OK" : "NG", isCorrect, floatPoint);
-  playSound(isCorrect ? AUDIO.ok : AUDIO.ng, "voice");
+  playSound(getAnswerSound(isCorrect), "voice");
+}
+
+function getAnswerSound(isCorrect) {
+  if (!isCorrect) return AUDIO.ng;
+  if (state.mode !== "quiz") return AUDIO.ok;
+  return AUDIO.okStreaks[state.quiz.streak] || AUDIO.ok;
 }
 
 function showAnswerFloat(text, isCorrect, point) {
@@ -381,18 +468,26 @@ function finishQuiz() {
       : score <= 8
         ? "high"
         : "perfect";
-  const resultImage = {
+  const resultImages = state.quiz.hardMode ? {
+    low: "quiz_result_hard_0-2.png",
+    mid: "quiz_result_hard_3-5.png",
+    high: "quiz_result_hard_6-8.png",
+    perfect: score === QUIZ_LENGTH ? "quiz_result_hard_10.png" : "quiz_result_hard_9.png",
+  } : {
     low: "quiz_result_0-2.png",
     mid: "quiz_result_3-5.png",
     high: "quiz_result_6-8.png",
-    perfect: "quiz_result_9-10.png",
-  }[resultKey];
+    perfect: score === QUIZ_LENGTH ? "quiz_result_10.png" : "quiz_result_9.png",
+  };
+  const resultImage = resultImages[resultKey];
+  unlockGalleryItem(resultImage);
 
   trackEvent("quiz_finish", {
     score,
     total_questions: QUIZ_LENGTH,
     question_direction: state.direction,
     ndc_division: state.division,
+    hard_mode: state.quiz.hardMode,
     result_rank: resultKey,
   });
 
@@ -432,7 +527,9 @@ function shareToX() {
   const score = state.quiz?.correct || 0;
   const directionLabel = state.direction === "codeToSubject" ? "NDC→主題" : "主題→NDC";
   const divisionLabel = state.division === "secondary" ? "二次区分" : "三次区分";
-  const text = `${APP_NAME}のクイズモード（${directionLabel} / ${divisionLabel}）で${QUIZ_LENGTH}問中${score}問正解しました！\n${APP_NAME}`;
+  const modeLabels = [directionLabel, divisionLabel, ...(state.quiz?.hardMode ? ["激ムズ"] : [])].join(" / ");
+  const appHashtag = `#${APP_NAME}`;
+  const text = `「${APP_NAME}」のクイズモード（${modeLabels}）で${QUIZ_LENGTH}問中${score}問正解しました！\n${appHashtag}`;
   const url = new URL("https://twitter.com/intent/tweet");
   url.searchParams.set("text", text);
   url.searchParams.set("url", location.origin + location.pathname);
@@ -477,6 +574,59 @@ function renderRecords() {
 
 function statCard(label, value) {
   return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>`;
+}
+
+function renderGallery() {
+  setView("gallery");
+  const records = readRecords();
+  app.innerHTML = `
+    <section class="screen scroll-screen gallery-screen">
+      <div class="top-bar">
+        <h1 class="section-title">ギャラリー</h1>
+        <button class="soft-button small ghost" data-action="home">戻る</button>
+      </div>
+      ${renderGalleryPanel(records)}
+    </section>
+  `;
+}
+
+function renderGalleryPanel(records) {
+  const seenImages = new Set(records.gallery.seenImages);
+  return `
+    <div class="panel gallery-panel">
+      <div class="gallery-heading">
+        <span class="stat-label">${seenImages.size}/${GALLERY_ITEMS.length}</span>
+      </div>
+      <div class="gallery-grid">
+        ${GALLERY_ITEMS.map((item) => {
+          const isUnlocked = seenImages.has(item.src);
+          return `
+            <button
+              class="gallery-thumb ${isUnlocked ? "is-unlocked" : "is-locked"}"
+              ${isUnlocked ? `data-gallery-src="${item.src}" data-gallery-label="${item.label}"` : "disabled"}
+              aria-label="${isUnlocked ? `${item.label}を大きく表示` : "まだ見ていない画像"}"
+            >
+              ${isUnlocked
+                ? `<img src="${item.src}" alt="${item.label}">`
+                : `<span aria-hidden="true">?</span>`}
+            </button>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function showGalleryPreview(src, label) {
+  app.querySelector(".gallery-preview")?.remove();
+  app.insertAdjacentHTML("beforeend", `
+    <div class="gallery-preview" role="dialog" aria-modal="true" aria-label="${escapeHtml(label)}">
+      <button class="gallery-preview-card" data-action="close-gallery-preview" aria-label="拡大表示を閉じる">
+        <img class="gallery-preview-image" src="${escapeHtml(src)}" alt="${escapeHtml(label)}">
+        <span class="gallery-preview-caption">${escapeHtml(label)}</span>
+      </button>
+    </div>
+  `);
 }
 
 function renderNdcLookup() {
@@ -747,6 +897,10 @@ app.addEventListener("click", (event) => {
     syncNdcDrum(digitIndex);
     return;
   }
+  if (target.dataset.gallerySrc) {
+    showGalleryPreview(target.dataset.gallerySrc, target.dataset.galleryLabel || "");
+    return;
+  }
   if (target.dataset.answer) {
     answerQuestion(target.dataset.answer, false, {
       x: event.clientX,
@@ -759,6 +913,7 @@ app.addEventListener("click", (event) => {
   if (action === "quiz-options") renderOptions("quiz");
   if (action === "training-options") renderOptions("training");
   if (action === "records") renderRecords();
+  if (action === "gallery") renderGallery();
   if (action === "ndc-lookup") renderNdcLookup();
   if (action === "mistakes") renderMistakes();
   if (action === "start-quiz") startQuiz("quiz");
@@ -766,6 +921,7 @@ app.addEventListener("click", (event) => {
   if (action === "next-question") nextQuestion();
   if (action === "quit-quiz") renderHome();
   if (action === "share-x") shareToX();
+  if (action === "close-gallery-preview") app.querySelector(".gallery-preview")?.remove();
 });
 
 app.addEventListener("scroll", (event) => {
@@ -773,5 +929,11 @@ app.addEventListener("scroll", (event) => {
   if (!(target instanceof Element) || !target.matches(".ndc-drum-options")) return;
   handleNdcDrumScroll(target);
 }, true);
+
+app.addEventListener("change", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || !target.matches("[data-hard-mode]")) return;
+  state.hardMode = target.checked;
+});
 
 init();
