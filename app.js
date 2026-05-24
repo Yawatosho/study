@@ -28,7 +28,12 @@ const QUIZ_HARD_RESULTS = [
   { src: "quiz_result_hard_9.png", label: "激ムズ9点の結果" },
   { src: "quiz_result_hard_10.png", label: "激ムズ10点の結果" },
 ];
-const GALLERY_ITEMS = [...QUIZ_CHARACTERS, ...QUIZ_RESULTS, ...QUIZ_HARD_RESULTS];
+const MODE_GALLERY_ITEMS = [
+  { src: "record.png", label: "これまでの記録" },
+  { src: "ndc.png", label: "NDCを確認" },
+  { src: "training.png", label: "トレーニングモード" },
+];
+const GALLERY_ITEMS = [...QUIZ_CHARACTERS, ...QUIZ_RESULTS, ...QUIZ_HARD_RESULTS, ...MODE_GALLERY_ITEMS];
 const GA_VIEW_TITLES = {
   home: "ホーム",
   "quiz-options": "クイズ設定",
@@ -228,8 +233,9 @@ function renderOptions(mode) {
   state.mode = mode;
   if (isEnteringOptions) playSound(AUDIO.modeSelect, "voice");
   const isTraining = mode === "training";
+  if (isTraining) unlockGalleryItem("training.png");
   app.innerHTML = `
-    <section class="screen">
+    <section class="screen options-screen ${isTraining ? "training-options-screen scroll-screen" : "quiz-options-screen"}">
       <div class="top-bar">
         <h1 class="section-title">${isTraining ? "トレーニング" : "クイズ"}設定</h1>
         <button class="soft-button small ghost" data-action="home">戻る</button>
@@ -543,6 +549,7 @@ function shareToX() {
 
 function renderRecords() {
   setView("records");
+  unlockGalleryItem("record.png");
   const records = readRecords();
   const rate = records.quiz.total ? Math.round((records.quiz.correct / records.quiz.total) * 100) : 0;
   app.innerHTML = `
@@ -631,6 +638,7 @@ function showGalleryPreview(src, label) {
 
 function renderNdcLookup() {
   setView("ndc-lookup");
+  unlockGalleryItem("ndc.png");
   const filtered = getFilteredNdc();
   app.innerHTML = `
     <section class="screen scroll-screen ndc-lookup-screen">
