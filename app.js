@@ -419,6 +419,21 @@ function renderQuestion(feedback = "") {
       </div>
     </section>
   `;
+  requestAnimationFrame(positionQuizCharacter);
+}
+
+function positionQuizCharacter() {
+  const screen = app.querySelector(".quiz-screen");
+  const answers = app.querySelector(".answer-grid");
+  const character = app.querySelector(".quiz-character");
+  if (!screen || !answers || !character) return;
+
+  const screenRect = screen.getBoundingClientRect();
+  const answerRect = answers.getBoundingClientRect();
+  const gap = Math.max(6, Math.min(12, screenRect.height * 0.012));
+  const top = Math.max(0, answerRect.bottom - screenRect.top + gap);
+  character.style.setProperty("--quiz-character-top", `${Math.round(top)}px`);
+  character.classList.add("is-positioned");
 }
 
 function makeAnswers(correctItem) {
@@ -953,6 +968,14 @@ app.addEventListener("change", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement) || !target.matches("[data-hard-mode]")) return;
   state.hardMode = target.checked;
+});
+
+window.addEventListener("resize", () => {
+  if (state.view === "quiz") requestAnimationFrame(positionQuizCharacter);
+});
+
+window.visualViewport?.addEventListener("resize", () => {
+  if (state.view === "quiz") requestAnimationFrame(positionQuizCharacter);
 });
 
 init();
