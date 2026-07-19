@@ -5,33 +5,33 @@ const QUESTION_SECONDS = 10;
 const MAX_MISTAKES = 20;
 const NDC_DIGIT_OPTIONS = ["any", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const QUIZ_CHARACTERS = [
-  { src: "quiz_chara_1.png", label: "司書さん 1" },
-  { src: "quiz_chara_2.png", label: "司書さん 2" },
-  { src: "quiz_chara_3.png", label: "司書さん 3" },
-  { src: "quiz_chara_4.png", label: "司書さん 4" },
-  { src: "quiz_chara_5.png", label: "司書さん 5" },
-  { src: "quiz_chara_6.png", label: "司書さん 6" },
-  { src: "quiz_chara_ok.png", label: "正解の司書さん" },
-  { src: "quiz_chara_ng.png", label: "不正解の司書さん" },
+  { src: "quiz_chara_1.webp", label: "司書さん 1" },
+  { src: "quiz_chara_2.webp", label: "司書さん 2" },
+  { src: "quiz_chara_3.webp", label: "司書さん 3" },
+  { src: "quiz_chara_4.webp", label: "司書さん 4" },
+  { src: "quiz_chara_5.webp", label: "司書さん 5" },
+  { src: "quiz_chara_6.webp", label: "司書さん 6" },
+  { src: "quiz_chara_ok.webp", label: "正解の司書さん" },
+  { src: "quiz_chara_ng.webp", label: "不正解の司書さん" },
 ];
 const QUIZ_RESULTS = [
-  { src: "quiz_result_0-2.png", label: "0〜2点の結果" },
-  { src: "quiz_result_3-5.png", label: "3〜5点の結果" },
-  { src: "quiz_result_6-8.png", label: "6〜8点の結果" },
-  { src: "quiz_result_9.png", label: "9点の結果" },
-  { src: "quiz_result_10.png", label: "10点の結果" },
+  { src: "quiz_result_0-2.webp", label: "0〜2点の結果" },
+  { src: "quiz_result_3-5.webp", label: "3〜5点の結果" },
+  { src: "quiz_result_6-8.webp", label: "6〜8点の結果" },
+  { src: "quiz_result_9.webp", label: "9点の結果" },
+  { src: "quiz_result_10.webp", label: "10点の結果" },
 ];
 const QUIZ_HARD_RESULTS = [
-  { src: "quiz_result_hard_0-2.png", label: "激ムズ0〜2点の結果" },
-  { src: "quiz_result_hard_3-5.png", label: "激ムズ3〜5点の結果" },
-  { src: "quiz_result_hard_6-8.png", label: "激ムズ6〜8点の結果" },
-  { src: "quiz_result_hard_9.png", label: "激ムズ9点の結果" },
-  { src: "quiz_result_hard_10.png", label: "激ムズ10点の結果" },
+  { src: "quiz_result_hard_0-2.webp", label: "激ムズ0〜2点の結果" },
+  { src: "quiz_result_hard_3-5.webp", label: "激ムズ3〜5点の結果" },
+  { src: "quiz_result_hard_6-8.webp", label: "激ムズ6〜8点の結果" },
+  { src: "quiz_result_hard_9.webp", label: "激ムズ9点の結果" },
+  { src: "quiz_result_hard_10.webp", label: "激ムズ10点の結果" },
 ];
 const MODE_GALLERY_ITEMS = [
-  { src: "record.png", label: "これまでの記録" },
-  { src: "ndc.png", label: "NDCを確認" },
-  { src: "training.png", label: "トレーニングモード" },
+  { src: "record.webp", label: "これまでの記録" },
+  { src: "ndc.webp", label: "NDCを確認" },
+  { src: "training.webp", label: "トレーニングモード" },
 ];
 const GALLERY_ITEMS = [...QUIZ_CHARACTERS, ...QUIZ_RESULTS, ...QUIZ_HARD_RESULTS, ...MODE_GALLERY_ITEMS];
 const GA_VIEW_TITLES = {
@@ -120,7 +120,9 @@ function mergeRecords(records) {
     },
     mistakes: Array.isArray(records.mistakes) ? records.mistakes.slice(0, MAX_MISTAKES) : [],
     gallery: {
-      seenImages: getStoredSeenImages(records).filter((src) => GALLERY_ITEMS.some((item) => item.src === src)),
+      seenImages: getStoredSeenImages(records)
+        .map((src) => src.replace(/\.png$/, ".webp"))
+        .filter((src) => GALLERY_ITEMS.some((item) => item.src === src)),
     },
   };
 }
@@ -209,14 +211,14 @@ function setView(view) {
 
 function renderHome() {
   setView("home");
-  unlockGalleryItem("quiz_chara_1.png");
+  unlockGalleryItem("quiz_chara_1.webp");
   app.innerHTML = `
     <section class="screen home">
       <div class="brand">
-        <img class="logo-slot" src="logo.png" alt="${APP_NAME}ロゴ">
+        <img class="logo-slot" src="logo.webp" alt="${APP_NAME}ロゴ">
         <h1 class="title">${APP_NAME}</h1>
       </div>
-      <img class="hero-character" src="quiz_chara_1.png" alt="">
+      <img class="hero-character" src="quiz_chara_1.webp" alt="">
       <button class="hero-face-hotspot" data-action="gallery" aria-label="ギャラリーを開く"></button>
       <div class="menu-stack home-menu">
         <button class="soft-button" data-action="quiz-options">クイズモード</button>
@@ -244,7 +246,7 @@ function renderOptions(mode) {
   state.mode = mode;
   if (isEnteringOptions) playSound(AUDIO.modeSelect, "voice");
   const isTraining = mode === "training";
-  if (isTraining) unlockGalleryItem("training.png");
+  if (isTraining) unlockGalleryItem("training.webp");
   app.innerHTML = `
     <section class="screen options-screen ${isTraining ? "training-options-screen scroll-screen" : "quiz-options-screen"}">
       <div class="top-bar">
@@ -387,7 +389,7 @@ function renderQuestion(feedback = "") {
   const question = state.direction === "codeToSubject" ? item.ndc : item.subject;
   const questionClass = state.direction === "codeToSubject" ? "code-question" : "subject-question";
   const kicker = state.direction === "codeToSubject" ? "このNDCの主題は？" : "この主題のNDCは？";
-  const character = feedback === "correct" ? "quiz_chara_ok.png" : feedback === "wrong" ? "quiz_chara_ng.png" : `quiz_chara_${randomInt(1, 6)}.png`;
+  const character = feedback === "correct" ? "quiz_chara_ok.webp" : feedback === "wrong" ? "quiz_chara_ng.webp" : `quiz_chara_${randomInt(1, 6)}.webp`;
   unlockGalleryItem(character);
 
   app.innerHTML = `
@@ -501,15 +503,15 @@ function finishQuiz() {
         ? "high"
         : "perfect";
   const resultImages = state.quiz.hardMode ? {
-    low: "quiz_result_hard_0-2.png",
-    mid: "quiz_result_hard_3-5.png",
-    high: "quiz_result_hard_6-8.png",
-    perfect: score === QUIZ_LENGTH ? "quiz_result_hard_10.png" : "quiz_result_hard_9.png",
+    low: "quiz_result_hard_0-2.webp",
+    mid: "quiz_result_hard_3-5.webp",
+    high: "quiz_result_hard_6-8.webp",
+    perfect: score === QUIZ_LENGTH ? "quiz_result_hard_10.webp" : "quiz_result_hard_9.webp",
   } : {
-    low: "quiz_result_0-2.png",
-    mid: "quiz_result_3-5.png",
-    high: "quiz_result_6-8.png",
-    perfect: score === QUIZ_LENGTH ? "quiz_result_10.png" : "quiz_result_9.png",
+    low: "quiz_result_0-2.webp",
+    mid: "quiz_result_3-5.webp",
+    high: "quiz_result_6-8.webp",
+    perfect: score === QUIZ_LENGTH ? "quiz_result_10.webp" : "quiz_result_9.webp",
   };
   const resultImage = resultImages[resultKey];
   unlockGalleryItem(resultImage);
@@ -579,7 +581,7 @@ function shareToX() {
 
 function renderRecords() {
   setView("records");
-  unlockGalleryItem("record.png");
+  unlockGalleryItem("record.webp");
   const records = readRecords();
   const rate = records.quiz.total ? Math.round((records.quiz.correct / records.quiz.total) * 100) : 0;
   app.innerHTML = `
@@ -668,7 +670,7 @@ function showGalleryPreview(src, label) {
 
 function renderNdcLookup() {
   setView("ndc-lookup");
-  unlockGalleryItem("ndc.png");
+  unlockGalleryItem("ndc.webp");
   const filtered = getFilteredNdc();
   app.innerHTML = `
     <section class="screen scroll-screen ndc-lookup-screen">
