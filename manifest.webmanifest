@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "司書さんと覚える日本十進分類",
+  "short_name": "NDCクイズ",
+  "description": "司書さんと一緒に日本十進分類を覚えるクイズゲーム",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f0df",
+  "theme_color": "#f7f0df",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

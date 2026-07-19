@@ -556,6 +556,10 @@ function resultSpeech(score) {
 }
 
 function shareToX() {
+  if (!navigator.onLine) {
+    window.alert("Xへの投稿にはインターネット接続が必要です。");
+    return;
+  }
   const score = state.quiz?.correct || 0;
   const directionLabel = state.direction === "codeToSubject" ? "NDC→主題" : "主題→NDC";
   const divisionLabel = state.division === "secondary" ? "二次区分" : "三次区分";
@@ -977,5 +981,11 @@ window.addEventListener("resize", () => {
 window.visualViewport?.addEventListener("resize", () => {
   if (state.view === "quiz") requestAnimationFrame(positionQuizCharacter);
 });
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
 
 init();
