@@ -44,6 +44,7 @@ const GA_VIEW_TITLES = {
   gallery: "ギャラリー",
   "ndc-lookup": "NDCを確認",
   mistakes: "間違えた問題",
+  help: "ヘルプ",
   notice: "お知らせ",
 };
 
@@ -223,10 +224,13 @@ function renderHome() {
       <button class="hero-face-hotspot" data-action="gallery" aria-label="ギャラリーを開く"></button>
       <div class="menu-stack home-menu">
         <button class="soft-button" data-action="quiz-options">クイズモード</button>
-        <button class="soft-button" data-action="training-options">トレーニングモード</button>
+        <div class="home-action-row">
+          <button class="soft-button" data-action="training-options">トレーニング</button>
+          <button class="soft-button" data-action="ndc-lookup">NDCを確認</button>
+        </div>
         <div class="home-action-row">
           <button class="soft-button" data-action="records">これまでの記録</button>
-          <button class="soft-button" data-action="ndc-lookup">NDCを確認</button>
+          <button class="soft-button" data-action="help">ヘルプ</button>
         </div>
         <div class="home-credit" aria-label="クレジット">
           <span>音声：効果音ラボ</span>
@@ -677,6 +681,45 @@ function statCard(label, value) {
   return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>`;
 }
 
+function renderHelp() {
+  setView("help");
+  app.innerHTML = `
+    <section class="screen scroll-screen help-screen">
+      <div class="top-bar">
+        <h1 class="section-title">遊び方</h1>
+        <button class="soft-button small ghost" data-action="home">戻る</button>
+      </div>
+
+      <div class="panel help-panel">
+        <h2>クイズモード</h2>
+        <p>10問の4択クイズに挑戦します。1問の制限時間は10秒です。「NDC→主題」と「主題→NDC」、二次区分と三次区分を選べます。</p>
+        <p>「激ムズ」では、同じ類の中から4つの選択肢が出るため、じっくり覚えたい方におすすめです。</p>
+      </div>
+
+      <div class="panel help-panel">
+        <h2>トレーニング</h2>
+        <p>覚えたい類を選んで、好きなだけ練習できます。間違えた問題は最大20問まで保存され、あとからまとめて復習できます。</p>
+      </div>
+
+      <div class="panel help-panel">
+        <h2>NDCを確認</h2>
+        <p>3桁の数字を選んで分類を絞り込めます。「図書館」や「日本文学」など、知りたいことばからも検索できます。</p>
+      </div>
+
+      <div class="panel help-panel">
+        <h2>記録と操作</h2>
+        <p>「これまでの記録」で、クイズの正解率やトレーニング回数を確認できます。記録はこの端末のブラウザに保存されます。</p>
+        <p>PCでは、キーボードの <kbd>1</kbd>〜<kbd>4</kbd> で回答し、正解の確認後は <kbd>Space</kbd> で次の問題へ進めます。</p>
+      </div>
+
+      <div class="panel help-panel">
+        <h2>いつでも学習</h2>
+        <p>一度読み込んだあとは、インターネットがつながっていないときでも遊べます。ホーム画面に追加すると、アプリのようにすぐ開けます。</p>
+      </div>
+    </section>
+  `;
+}
+
 function renderGallery() {
   setView("gallery");
   const records = readRecords();
@@ -1039,6 +1082,7 @@ app.addEventListener("click", (event) => {
   if (action === "quiz-options") renderOptions("quiz");
   if (action === "training-options") renderOptions("training");
   if (action === "records") renderRecords();
+  if (action === "help") renderHelp();
   if (action === "gallery") renderGallery();
   if (action === "ndc-lookup") renderNdcLookup();
   if (action === "mistakes") renderMistakes();

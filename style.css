@@ -615,6 +615,31 @@ input {
   line-height: 1.55;
 }
 
+.help-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.help-panel p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.75;
+}
+
+.help-panel kbd {
+  display: inline-block;
+  min-width: 28px;
+  padding: 1px 7px;
+  border: 1px solid rgba(111, 95, 73, 0.36);
+  border-bottom-width: 3px;
+  border-radius: 7px;
+  background: var(--paper);
+  font: 800 12px/1.6 system-ui, sans-serif;
+  text-align: center;
+}
+
 .stat-card {
   min-height: 92px;
   padding: 14px;
