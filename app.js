@@ -80,6 +80,7 @@ const state = {
   hardMode: false,
   selectedClasses: new Set(),
   ndcFilters: ["any", "any", "any"],
+  ndcSearch: "",
   quiz: null,
   timerId: null,
   remaining: QUESTION_SECONDS,
@@ -335,6 +336,39 @@ function startQuiz(mode) {
   nextQuestion();
 }
 
+function startMistakeReview() {
+  const records = readRecords();
+  const questions = sample(records.mistakes, Math.min(QUIZ_LENGTH, records.mistakes.length))
+    .map((mistake) => {
+      const item = state.ndc.find((candidate) => candidate.ndc === mistake.ndc);
+      return item ? {
+        ...item,
+        reviewDirection: mistake.direction,
+        reviewDivision: mistake.division,
+      } : null;
+    })
+    .filter(Boolean);
+
+  if (!questions.length) {
+    showNotice("復習できる問題はまだありません。", renderMistakes);
+    return;
+  }
+
+  state.mode = "review";
+  state.quiz = {
+    questions,
+    current: 0,
+    correct: 0,
+    streak: 0,
+    hardMode: false,
+    answered: false,
+    activeItem: null,
+    pool: state.ndc,
+    startedAt: Date.now(),
+  };
+  nextQuestion();
+}
+
 function getPool() {
   return state.ndc.filter((item) => {
     const divisionOk = state.division === "tertiary" || item.ndc.endsWith("0");
@@ -355,18 +389,25 @@ function getHardModePool(pool) {
 function nextQuestion() {
   clearQuestionTimer();
   setView("quiz");
-  if (state.mode === "quiz" && state.quiz.answered) {
+  const isFiniteSession = state.mode === "quiz" || state.mode === "review";
+  if (isFiniteSession && state.quiz.answered) {
     state.quiz.current += 1;
   }
-  if (state.mode === "quiz" && state.quiz.current >= state.quiz.questions.length) {
-    finishQuiz();
+  if (isFiniteSession && state.quiz.current >= state.quiz.questions.length) {
+    if (state.mode === "review") finishMistakeReview();
+    else finishQuiz();
     return;
   }
   state.quiz.answered = false;
   state.quiz.selectedAnswer = null;
-  state.quiz.activeItem = state.mode === "quiz"
+  state.quiz.activeItem = isFiniteSession
     ? state.quiz.questions[state.quiz.current]
     : sample(state.quiz.pool, 1)[0];
+  if (state.mode === "review") {
+    state.direction = state.quiz.activeItem.reviewDirection || "codeToSubject";
+    state.division = state.quiz.activeItem.reviewDivision || "tertiary";
+    state.quiz.pool = state.ndc.filter((item) => state.division === "tertiary" || item.ndc.endsWith("0"));
+  }
   state.quiz.activeAnswers = makeAnswers(state.quiz.activeItem);
   state.remaining = QUESTION_SECONDS;
   renderQuestion();
@@ -383,7 +424,9 @@ function playQuestionSound() {
 }
 
 function renderQuestion(feedback = "") {
-  const questionNumber = state.mode === "quiz" ? `${state.quiz.current + 1}/${QUIZ_LENGTH}` : `正解 ${state.quiz.correct}`;
+  const isFiniteSession = state.mode === "quiz" || state.mode === "review";
+  const questionNumber = isFiniteSession ? `${state.quiz.current + 1}/${state.quiz.questions.length}` : `正解 ${state.quiz.correct}`;
+  const modeLabel = state.mode === "quiz" ? "クイズ" : state.mode === "review" ? "間違い復習" : "トレーニング";
   const item = state.quiz.activeItem;
   const answers = state.quiz.activeAnswers;
   const question = state.direction === "codeToSubject" ? item.ndc : item.subject;
@@ -395,7 +438,7 @@ function renderQuestion(feedback = "") {
   app.innerHTML = `
     <section class="screen quiz-screen">
       <div class="quiz-meta">
-        <span>${state.mode === "quiz" ? "クイズ" : "トレーニング"}</span>
+        <span>${modeLabel}</span>
         <span>${questionNumber}</span>
       </div>
       <div class="timer-track" aria-label="残り時間">
@@ -406,18 +449,18 @@ function renderQuestion(feedback = "") {
         <div class="question-text ${questionClass}">${escapeHtml(question)}</div>
       </div>
       <div class="answer-grid">
-        ${answers.map((answer) => {
+        ${answers.map((answer, index) => {
           const value = state.direction === "codeToSubject" ? answer.subject : answer.ndc;
           const isCorrectAnswer = state.quiz.answered && answer.ndc === item.ndc;
           const isWrongSelection = state.quiz.answered && state.quiz.selectedAnswer === answer.ndc && answer.ndc !== item.ndc;
           const className = isCorrectAnswer ? " correct" : isWrongSelection ? " wrong" : "";
-          return `<button class="answer-button${className}" data-answer="${answer.ndc}" ${state.quiz.answered ? "disabled" : ""}>${escapeHtml(value)}</button>`;
+          return `<button class="answer-button${className}" data-answer="${answer.ndc}" aria-keyshortcuts="${index + 1}" ${state.quiz.answered ? "disabled" : ""}>${escapeHtml(value)}</button>`;
         }).join("")}
       </div>
       <img class="quiz-character" src="${character}" alt="">
       <div class="button-row">
-        <button class="soft-button small ghost" data-action="${state.mode === "quiz" ? "quit-quiz" : "training-options"}">やめる</button>
-        ${state.quiz.answered ? `<button class="soft-button small primary" data-action="next-question">次へ</button>` : ""}
+        <button class="soft-button small ghost" data-action="${state.mode === "quiz" ? "quit-quiz" : state.mode === "review" ? "mistakes" : "training-options"}">やめる</button>
+        ${state.quiz.answered ? `<button class="soft-button small primary" data-action="next-question" aria-keyshortcuts="Space">次へ</button>` : ""}
       </div>
     </section>
   `;
@@ -441,7 +484,7 @@ function positionQuizCharacter() {
 function makeAnswers(correctItem) {
   const others = state.quiz.pool.filter((item) => {
     const isDifferentItem = item.ndc !== correctItem.ndc;
-    const isSameClass = !state.hardMode || item.ndc[0] === correctItem.ndc[0];
+    const isSameClass = !state.quiz.hardMode || item.ndc[0] === correctItem.ndc[0];
     return isDifferentItem && isSameClass;
   });
   return shuffle([correctItem, ...sample(others, 3)]);
@@ -538,6 +581,25 @@ function finishQuiz() {
     </section>
   `;
   playSound(AUDIO.results[resultKey], "voice");
+}
+
+function finishMistakeReview() {
+  clearQuestionTimer();
+  setView("result");
+  const score = state.quiz.correct;
+  const total = state.quiz.questions.length;
+  app.innerHTML = `
+    <section class="screen result-screen review-result-screen">
+      <h1 class="section-title">復習結果</h1>
+      <div class="score">${score}/${total}</div>
+      <p class="speech">${score === total ? "全問正解です！しっかり復習できました♪" : "間違えた問題をもう一度確認してみましょう♪"}</p>
+      <div class="menu-stack">
+        <button class="soft-button primary" data-action="start-mistake-review">もう一度復習</button>
+        <button class="soft-button ghost" data-action="mistakes">間違えた問題へ</button>
+      </div>
+    </section>
+  `;
+  playSound(score === total ? AUDIO.results.perfect : AUDIO.results.mid, "voice");
 }
 
 function resultSpeech(score) {
@@ -679,6 +741,17 @@ function renderNdcLookup() {
         <button class="soft-button small ghost" data-action="home">戻る</button>
       </div>
       <div class="ndc-filter-panel">
+        <label class="ndc-search-field">
+          <span>分類の内容を検索</span>
+          <input
+            type="search"
+            inputmode="search"
+            autocomplete="off"
+            data-ndc-search
+            value="${escapeHtml(state.ndcSearch)}"
+            placeholder="例：図書館、日本文学"
+          >
+        </label>
         <div class="ndc-drum-grid">
           ${state.ndcFilters.map((value, index) => renderNdcDrum(index, value)).join("")}
         </div>
@@ -718,8 +791,18 @@ function renderNdcDrum(index, value) {
 }
 
 function getFilteredNdc() {
+  const searchTerms = state.ndcSearch
+    .normalize("NFKC")
+    .toLocaleLowerCase("ja")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
   return state.ndc.filter((item) => {
-    return state.ndcFilters.every((digit, index) => digit === "any" || item.ndc[index] === digit);
+    const digitMatches = state.ndcFilters.every((digit, index) => digit === "any" || item.ndc[index] === digit);
+    const subject = item.subject.normalize("NFKC").toLocaleLowerCase("ja");
+    const searchMatches = searchTerms.every((term) => subject.includes(term));
+    return digitMatches && searchMatches;
   });
 }
 
@@ -822,6 +905,9 @@ function renderMistakes() {
         <h1 class="section-title">間違えた問題</h1>
         <button class="soft-button small ghost" data-action="training-options">戻る</button>
       </div>
+      ${records.mistakes.length ? `
+        <button class="soft-button primary" data-action="start-mistake-review">間違えた問題を復習</button>
+      ` : ""}
       <div class="mistake-list">
         ${records.mistakes.length ? records.mistakes.map((item) => `
           <div class="mistake-item">
@@ -958,6 +1044,7 @@ app.addEventListener("click", (event) => {
   if (action === "mistakes") renderMistakes();
   if (action === "start-quiz") startQuiz("quiz");
   if (action === "start-training") startQuiz("training");
+  if (action === "start-mistake-review") startMistakeReview();
   if (action === "next-question") nextQuestion();
   if (action === "quit-quiz") renderHome();
   if (action === "share-x") shareToX();
@@ -976,12 +1063,38 @@ app.addEventListener("change", (event) => {
   state.hardMode = target.checked;
 });
 
+app.addEventListener("input", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || !target.matches("[data-ndc-search]")) return;
+  state.ndcSearch = target.value;
+  updateNdcLookup();
+});
+
 window.addEventListener("resize", () => {
   if (state.view === "quiz") requestAnimationFrame(positionQuizCharacter);
 });
 
 window.visualViewport?.addEventListener("resize", () => {
   if (state.view === "quiz") requestAnimationFrame(positionQuizCharacter);
+});
+
+window.addEventListener("keydown", (event) => {
+  if (state.view !== "quiz" || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+  const target = event.target;
+  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+
+  if (!state.quiz?.answered && /^[1-4]$/.test(event.key)) {
+    const answer = app.querySelectorAll(".answer-button")[Number(event.key) - 1];
+    if (!(answer instanceof HTMLButtonElement) || answer.disabled) return;
+    event.preventDefault();
+    answerQuestion(answer.dataset.answer);
+    return;
+  }
+
+  if (state.quiz?.answered && (event.key === " " || event.code === "Space")) {
+    event.preventDefault();
+    nextQuestion();
+  }
 });
 
 if ("serviceWorker" in navigator) {

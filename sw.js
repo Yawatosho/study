@@ -1,10 +1,10 @@
-const CACHE_NAME = "ndc-quiz-v2-webp";
+const CACHE_NAME = "ndc-quiz-v5-mistake-review";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./app.js?v=20260720-webp",
-  "./style.css?v=20260720-pwa",
+  "./app.js?v=20260720-mistake-review",
+  "./style.css?v=20260720-mistake-review",
   "./manifest.webmanifest",
   "./ndc.json",
   "./favicon.ico",

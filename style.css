@@ -588,6 +588,10 @@ input {
   background-color: rgba(227, 237, 216, 0.94);
 }
 
+.review-result-screen {
+  justify-content: center;
+}
+
 .score {
   align-self: center;
   min-width: 180px;
@@ -738,6 +742,36 @@ input {
 .ndc-filter-panel {
   display: grid;
   gap: 10px;
+}
+
+.ndc-search-field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.ndc-search-field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 2px solid rgba(111, 95, 73, 0.32);
+  border-radius: 14px;
+  outline: none;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ndc-search-field input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(138, 165, 138, 0.2);
+}
+
+.ndc-search-field input::placeholder {
+  color: rgba(126, 113, 98, 0.68);
 }
 
 .ndc-drum-grid {
