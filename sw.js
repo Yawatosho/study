@@ -1,10 +1,10 @@
-const CACHE_NAME = "ndc-quiz-v6-help";
+const CACHE_NAME = "ndc-quiz-v8-credit-layout";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./app.js?v=20260720-help",
-  "./style.css?v=20260720-help",
+  "./app.js?v=20260813-credit-layout",
+  "./style.css?v=20260813-credit-layout",
   "./manifest.webmanifest",
   "./ndc.json",
   "./favicon.ico",

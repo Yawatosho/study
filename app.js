@@ -233,10 +233,21 @@ function renderHome() {
           <button class="soft-button" data-action="help">ヘルプ</button>
         </div>
         <div class="home-credit" aria-label="クレジット">
-          <span>音声：効果音ラボ</span>
-          <span>NDC：日本図書館協会</span>
-          <span>作成：やわらか図書館学</span>
-          <span>画像・コーディングにAIを使用</span>
+          <div class="home-credit-details">
+            <span>音声：効果音ラボ</span>
+            <span>NDC：日本図書館協会</span>
+            <span>作成：やわらか図書館学</span>
+          </div>
+          <a
+            class="games-link"
+            href="https://yawatosho.github.io/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="YAWATOSHO GAMESを新しいタブで開く"
+          >
+            <span>YAWATOSHO GAMES</span>
+            <span aria-hidden="true">↗</span>
+          </a>
         </div>
       </div>
     </section>

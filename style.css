@@ -227,8 +227,9 @@ input {
 
 .home-credit {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
   justify-self: center;
   width: min(100%, 340px);
   margin: 2px 0 0;
@@ -242,6 +243,36 @@ input {
   font-weight: 700;
   line-height: 1.35;
   text-align: center;
+}
+
+.home-credit-details {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.games-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  align-self: center;
+  white-space: nowrap;
+  padding: 0.55em 0.9em;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: inherit;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  text-decoration: none;
+  font: 600 12px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.03em;
+}
+
+.games-link:focus-visible {
+  outline: 3px solid rgba(138, 165, 138, 0.55);
+  outline-offset: 2px;
 }
 
 .button-row {
