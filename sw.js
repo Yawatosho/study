@@ -1,10 +1,11 @@
-const CACHE_NAME = "ndc-quiz-v9-assets-folders";
+const CACHE_NAME = "ndc-quiz-v10-lessons-mvp18";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./app.js?v=20260822-assets-folders",
-  "./style.css?v=20260822-assets-folders",
+  "./lesson_data.js?v=20260830-lessons-mvp18",
+  "./app.js?v=20260830-lessons-mvp18",
+  "./style.css?v=20260830-lessons-mvp18",
   "./manifest.webmanifest",
   "./ndc.json",
   "./images/favicon.ico",
@@ -12,6 +13,10 @@ const APP_FILES = [
   "./images/icon-192.png",
   "./images/icon-512.png",
   "./images/logo.webp",
+  "./images/lecture01.webp",
+  "./images/lecture02.webp",
+  "./images/lecture03.webp",
+  "./images/lecture04.webp",
   "./images/ndc.webp",
   "./images/ogp.png",
   "./images/record.webp",

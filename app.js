@@ -1,9 +1,11 @@
 const APP_NAME = "司書さんと覚える日本十進分類";
 const STORAGE_KEY = "ndcQuizRecordsV1";
+const LESSON_STORAGE_KEY = "ndcLessonProgressV1";
 const QUIZ_LENGTH = 10;
 const QUESTION_SECONDS = 10;
 const MAX_MISTAKES = 20;
 const NDC_DIGIT_OPTIONS = ["any", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const LECTURE_CHARACTERS = Array.from({ length: 4 }, (_, index) => `images/lecture0${index + 1}.webp`);
 const QUIZ_CHARACTERS = [
   { src: "images/quiz_chara_1.webp", label: "司書さん 1" },
   { src: "images/quiz_chara_2.webp", label: "司書さん 2" },
@@ -46,6 +48,8 @@ const GA_VIEW_TITLES = {
   mistakes: "間違えた問題",
   help: "ヘルプ",
   notice: "お知らせ",
+  lessons: "講座一覧",
+  lesson: "NDC講座",
 };
 
 const AUDIO = {
@@ -86,6 +90,7 @@ const state = {
   timerId: null,
   remaining: QUESTION_SECONDS,
   audioChannels: {},
+  lesson: null,
 };
 
 const defaultRecords = {
@@ -187,6 +192,7 @@ function playButtonSound(target) {
 function shouldPlayButtonSound(target) {
   if (state.view === "quiz") return false;
   const action = target.dataset.action;
+  if (state.view === "lesson" && ["lesson-previous", "lesson-next", "finish-lesson"].includes(action)) return false;
   if (target.dataset.gallerySrc || action === "close-gallery-preview") return false;
   if (state.view === "quiz-options" || state.view === "training-options") {
     return action === "start-quiz" || action === "start-training";
@@ -202,7 +208,15 @@ async function init() {
     app.innerHTML = `<section class="screen"><h1 class="section-title">NDCデータを読み込めませんでした</h1></section>`;
     return;
   }
+  preloadLectureCharacters();
   renderHome();
+}
+
+function preloadLectureCharacters() {
+  for (const src of LECTURE_CHARACTERS) {
+    const image = new Image();
+    image.src = src;
+  }
 }
 
 function setView(view) {
@@ -224,9 +238,12 @@ function renderHome() {
       <img class="hero-character" src="images/quiz_chara_1.webp" alt="">
       <button class="hero-face-hotspot" data-action="gallery" aria-label="ギャラリーを開く"></button>
       <div class="menu-stack home-menu">
-        <button class="soft-button" data-action="quiz-options">クイズモード</button>
         <div class="home-action-row">
+          <button class="soft-button" data-action="quiz-options">クイズモード</button>
           <button class="soft-button" data-action="training-options">トレーニング</button>
+        </div>
+        <div class="home-action-row">
+          <button class="soft-button lesson-home-button" data-action="lessons">NDC講座</button>
           <button class="soft-button" data-action="ndc-lookup">NDCを確認</button>
         </div>
         <div class="home-action-row">
@@ -255,6 +272,223 @@ function renderHome() {
   `;
   const logo = app.querySelector(".logo-slot");
   logo.addEventListener("load", () => logo.classList.add("is-visible"), { once: true });
+}
+
+function readLessonProgress() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(LESSON_STORAGE_KEY));
+    return {
+      completed: Array.isArray(stored?.completed)
+        ? stored.completed.map(Number).filter((id) => LESSONS.some((lesson) => lesson.id === id))
+        : [],
+    };
+  } catch {
+    return { completed: [] };
+  }
+}
+
+function completeLesson(lessonId) {
+  const progress = readLessonProgress();
+  if (!progress.completed.includes(lessonId)) progress.completed.push(lessonId);
+  localStorage.setItem(LESSON_STORAGE_KEY, JSON.stringify(progress));
+}
+
+function renderLessonList() {
+  setView("lessons");
+  const completed = new Set(readLessonProgress().completed);
+  app.innerHTML = `
+    <section class="screen scroll-screen lesson-list-screen">
+      <div class="top-bar">
+        <div>
+          <div class="lesson-kicker">NDCの基本を学ぼう</div>
+          <h1 class="section-title">司書さんと覚える</h1>
+        </div>
+        <button class="soft-button small ghost" data-action="home">戻る</button>
+      </div>
+      <div class="lesson-list" aria-label="講座一覧">
+        ${LESSONS.map((lesson) => {
+          const isCompleted = completed.has(lesson.id);
+          return `
+            <button class="lesson-list-card ${isCompleted ? "is-completed" : ""}" data-lesson-id="${lesson.id}">
+              <span class="lesson-list-number">第${lesson.id}講</span>
+              <span class="lesson-list-title">${escapeHtml(lesson.title)}</span>
+              <span class="lesson-list-status" aria-label="${isCompleted ? "完了済み" : "未完了"}">${isCompleted ? "✓ 完了" : "はじめる →"}</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+      <p class="lesson-list-note">最後まで読むと、この端末に完了マークがつきます。</p>
+    </section>
+  `;
+}
+
+function startLesson(lessonId) {
+  const lesson = LESSONS.find((candidate) => candidate.id === Number(lessonId));
+  if (!lesson) return;
+  state.lesson = { id: lesson.id, page: 0, answer: null, answeredCorrectly: false, characterSrc: null };
+  renderLesson();
+}
+
+function getActiveLesson() {
+  return LESSONS.find((lesson) => lesson.id === state.lesson?.id);
+}
+
+function renderLesson() {
+  const lesson = getActiveLesson();
+  if (!lesson) {
+    renderLessonList();
+    return;
+  }
+  setView("lesson");
+  const page = lesson.pages[state.lesson.page];
+  const isFirst = state.lesson.page === 0;
+  const isLast = state.lesson.page === lesson.pages.length - 1;
+  const needsAnswer = page.visual.type === "mini-question" && !state.lesson.answer;
+  const characterSrc = chooseLectureCharacter();
+  const lessonMessages = getLessonMessages(page);
+  const hasLongMessage = lessonMessages.join("").length >= 70;
+  app.innerHTML = `
+    <section class="screen lesson-screen">
+      <header class="lesson-header">
+        <button class="lesson-icon-button" data-action="lessons" aria-label="講座一覧へ戻る">‹</button>
+        <div class="lesson-heading">
+          <span>第${lesson.id}講</span>
+          <h1>${escapeHtml(lesson.title)}</h1>
+        </div>
+        <span class="lesson-page-count">${state.lesson.page + 1}/${lesson.pages.length}</span>
+      </header>
+      <div class="lesson-progress" aria-label="講座の進み具合"><span style="width:${((state.lesson.page + 1) / lesson.pages.length) * 100}%"></span></div>
+      <div class="lesson-visual lesson-visual-${page.visual.type}" role="region" aria-label="図解・教材エリア">
+        ${renderLessonVisual(page.visual)}
+      </div>
+      <section class="lesson-dialogue" aria-label="司書さんの説明">
+        <div class="lesson-character-frame" aria-hidden="true">
+          <img src="${characterSrc}" alt="">
+        </div>
+        <div class="lesson-dialogue-content">
+          <div class="lesson-messages ${needsAnswer ? "needs-answer" : ""} ${hasLongMessage ? "is-long" : ""}">${renderLessonMessages(lessonMessages)}</div>
+          <div class="lesson-navigation">
+            <button class="soft-button small ghost" data-action="lesson-previous" ${isFirst ? "disabled" : ""}>前へ</button>
+            <button class="soft-button small primary" data-action="${isLast ? "finish-lesson" : "lesson-next"}" ${needsAnswer ? "disabled" : ""}>${needsAnswer ? "答えると進めます" : isLast ? "講座を終える" : "次へ"}</button>
+          </div>
+        </div>
+      </section>
+    </section>
+  `;
+}
+
+function chooseLectureCharacter() {
+  const previous = state.lesson?.characterSrc;
+  const candidates = LECTURE_CHARACTERS.filter((src) => src !== previous);
+  const selected = candidates[randomInt(0, candidates.length - 1)] || LECTURE_CHARACTERS[0];
+  state.lesson.characterSrc = selected;
+  return selected;
+}
+
+function getLessonMessages(page) {
+  let messages = page.messages;
+  if (page.visual.type === "mini-question" && !state.lesson.answer) {
+    messages = ["上の確認問題に答えてみましょう。答えを選ぶと、先へ進めるようになりますよ。"];
+  } else if (page.visual.type === "mini-question" && state.lesson.answer !== page.visual.answer) {
+    messages = ["まちがえても大丈夫です。解説を読んだら、そのまま進んでも、もう一度選び直してもいいですよ。"];
+  }
+  return messages;
+}
+
+function renderLessonMessages(messages) {
+  return messages.map((message) => `<p>${escapeHtml(message)}</p>`).join("");
+}
+
+function renderLessonVisual(visual) {
+  if (visual.type === "spine-label") {
+    return `
+      <div class="book-spine">
+        <div class="spine-label" aria-label="分類番号 ${escapeHtml(visual.code)}">
+          <span class="spine-label-row spine-label-code">${escapeHtml(visual.code)}</span>
+          <span class="spine-label-row" aria-hidden="true"></span>
+          <span class="spine-label-row" aria-hidden="true"></span>
+        </div>
+      </div>
+    `;
+  }
+  if (visual.type === "mapping") {
+    return `<div class="lesson-mapping">${visual.items.map((item) => `<strong>${escapeHtml(item.code)}</strong><span class="lesson-arrow">↓</span><span>${escapeHtml(item.subject)}</span>`).join("")}</div>`;
+  }
+  if (visual.type === "examples") {
+    return `<div class="lesson-example-list">${visual.items.map((item) => `<div><strong>${item.code}</strong><span>${escapeHtml(item.subject)}</span></div>`).join("")}</div>${renderTakeaway(visual.takeaway)}`;
+  }
+  if (visual.type === "number-grid") {
+    return `<div class="lesson-number-grid">${visual.numbers.map((number) => `<span>${number}</span>`).join("")}</div>`;
+  }
+  if (visual.type === "class-grid") {
+    return `<div class="lesson-class-grid">${visual.items.map((subject, index) => `<div><strong>${index}</strong><span>${escapeHtml(subject)}</span></div>`).join("")}</div>`;
+  }
+  if (visual.type === "memory-groups") {
+    return `<div class="memory-caption">${escapeHtml(visual.caption)}</div><div class="memory-groups">${visual.groups.map((group) => `<div class="memory-group"><strong>${escapeHtml(group.numbers)}</strong><span>${escapeHtml(group.subjects)}</span><em>${escapeHtml(group.label)}</em></div>`).join("")}</div>`;
+  }
+  if (visual.type === "special-class") {
+    return `<div class="special-class-card"><span class="special-question">?</span><strong>${visual.number}</strong><span>${escapeHtml(visual.subject)}</span></div>`;
+  }
+  if (visual.type === "sequence") {
+    return `<div class="lesson-sequence">${visual.items.map((item, index) => `${index ? '<span class="lesson-arrow">↓</span>' : ""}<strong>${item}</strong>`).join("")}</div>`;
+  }
+  if (visual.type === "hierarchy") {
+    return `<div class="lesson-hierarchy">${visual.items.map((item, index) => `${index ? '<span class="lesson-arrow">↓</span>' : ""}<div><strong>${item.code}</strong><span>${escapeHtml(item.subject)}</span></div>`).join("")}</div>`;
+  }
+  if (visual.type === "zoom-hierarchy") {
+    return `<div class="zoom-tree">${visual.items.map((item, index) => `<div style="--depth:${index}"><strong>${item.code}</strong><span>${escapeHtml(item.subject)}</span></div>`).join("")}</div>${renderTakeaway(visual.takeaway, "zoom")}`;
+  }
+  if (visual.type === "mini-question") {
+    const selected = state.lesson?.answer;
+    const isCorrect = selected === visual.answer;
+    const feedback = selected
+      ? `<div class="mini-feedback ${isCorrect ? "is-correct" : "is-wrong"}" role="status"><strong>${escapeHtml(isCorrect ? visual.correctTitle : visual.wrongTitle)}</strong><span>${escapeHtml(isCorrect ? visual.correctText : visual.wrongText)}</span></div>`
+      : "";
+    return `
+      <div class="mini-question">
+        <div class="mini-question-heading"><strong>確認問題</strong><span>答えを1つ選んでください</span></div>
+        <div class="mini-question-path">${visual.items.map((item, index) => `${index ? '<span class="lesson-arrow">↓</span>' : ""}<div><strong>${item.code}</strong><span>${escapeHtml(item.subject)}</span></div>`).join("")}</div>
+        <h2>${escapeHtml(visual.question)}</h2>
+        <div class="mini-choice-grid">${visual.choices.map((choice) => `<button class="option-button ${selected === choice.id ? (choice.id === visual.answer ? "is-correct" : "is-wrong") : ""}" data-mini-answer="${choice.id}">${escapeHtml(choice.label)}</button>`).join("")}</div>
+        ${feedback}
+      </div>
+    `;
+  }
+  return "";
+}
+
+function renderTakeaway(text, modifier = "") {
+  return `<div class="lesson-takeaway ${modifier ? `lesson-takeaway-${modifier}` : ""}"><span>覚えておこう！</span><strong>${escapeHtml(text)}</strong></div>`;
+}
+
+function answerMiniQuestion(answer) {
+  const page = getActiveLesson()?.pages[state.lesson.page];
+  if (page?.visual.type !== "mini-question") return;
+  state.lesson.answer = answer;
+  state.lesson.answeredCorrectly = answer === page.visual.answer;
+  renderLesson();
+}
+
+function finishLesson() {
+  const lesson = getActiveLesson();
+  if (!lesson) return;
+  completeLesson(lesson.id);
+  setView("lesson");
+  const hasTraining = lesson.finishActions?.includes("training");
+  app.innerHTML = `
+    <section class="screen lesson-finish-screen">
+      <div class="lesson-finish-mark" aria-hidden="true">✓</div>
+      <div>
+        <div class="lesson-kicker">第${lesson.id}講 完了</div>
+        <h1 class="section-title">${escapeHtml(lesson.title)}</h1>
+      </div>
+      <p class="speech">おつかれさまでした！講座一覧に完了マークがつきました。</p>
+      <div class="menu-stack">
+        ${hasTraining ? `<button class="soft-button primary" data-action="training-options">0〜9類を練習してみる</button>` : ""}
+        <button class="soft-button ghost" data-action="lessons">講座一覧へ戻る</button>
+      </div>
+    </section>
+  `;
 }
 
 function renderOptions(mode) {
@@ -1082,6 +1316,14 @@ app.addEventListener("click", (event) => {
     showGalleryPreview(target.dataset.gallerySrc, target.dataset.galleryLabel || "");
     return;
   }
+  if (target.dataset.lessonId) {
+    startLesson(target.dataset.lessonId);
+    return;
+  }
+  if (target.dataset.miniAnswer) {
+    answerMiniQuestion(target.dataset.miniAnswer);
+    return;
+  }
   if (target.dataset.answer) {
     answerQuestion(target.dataset.answer, false, {
       x: event.clientX,
@@ -1091,6 +1333,18 @@ app.addEventListener("click", (event) => {
   }
 
   if (action === "home") renderHome();
+  if (action === "lessons") renderLessonList();
+  if (action === "lesson-previous" && state.lesson?.page > 0) {
+    state.lesson.page -= 1;
+    renderLesson();
+  }
+  if (action === "lesson-next" && state.lesson?.page < getActiveLesson().pages.length - 1) {
+    state.lesson.page += 1;
+    state.lesson.answer = null;
+    state.lesson.answeredCorrectly = false;
+    renderLesson();
+  }
+  if (action === "finish-lesson") finishLesson();
   if (action === "quiz-options") renderOptions("quiz");
   if (action === "training-options") renderOptions("training");
   if (action === "records") renderRecords();
