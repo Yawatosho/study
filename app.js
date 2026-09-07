@@ -253,7 +253,7 @@ function renderHome() {
         <div class="home-credit" aria-label="クレジット">
           <div class="home-credit-details">
             <span>音声：効果音ラボ</span>
-            <span>NDC：日本図書館協会</span>
+            <span>NDC：日本十進分類法<br><span class="home-credit-edition">新訂9版（日本図書館協会）</span></span>
             <span>作成：やわらか図書館学</span>
           </div>
           <a
@@ -317,7 +317,6 @@ function renderLessonList() {
           `;
         }).join("")}
       </div>
-      <p class="lesson-list-note">最後まで読むと、この端末に完了マークがつきます。</p>
     </section>
   `;
 }
@@ -568,6 +567,9 @@ function finishLesson() {
   completeLesson(lesson.id);
   setView("lesson");
   const finishActions = Array.isArray(lesson.finishActions) ? lesson.finishActions : [];
+  const lessonIndex = LESSONS.findIndex((candidate) => candidate.id === lesson.id);
+  const nextLesson = lessonIndex >= 0 ? LESSONS[lessonIndex + 1] : null;
+  const actionCount = finishActions.length + (nextLesson ? 1 : 0) + 1;
   app.innerHTML = `
     <section class="screen lesson-finish-screen">
       <header class="lesson-finish-header">
@@ -575,8 +577,12 @@ function finishLesson() {
         <h1 class="section-title">${escapeHtml(lesson.title)}</h1>
         <p class="lesson-finish-message">おつかれさまでした！</p>
       </header>
-      <div class="menu-stack lesson-finish-actions count-${finishActions.length + 1}">
-        ${finishActions.map((item) => `<button class="soft-button ${escapeHtml(item.kind || "primary")}" data-action="${escapeHtml(item.action)}">${escapeHtml(item.label)}</button>`).join("")}
+      <div class="menu-stack lesson-finish-actions count-${actionCount}">
+        ${nextLesson ? `<button class="soft-button primary" data-action="next-lesson" data-next-lesson-id="${nextLesson.id}">次の講座へ</button>` : ""}
+        ${finishActions.map((item) => {
+          const kind = nextLesson && item.kind === "primary" ? "accent" : item.kind || "primary";
+          return `<button class="soft-button ${escapeHtml(kind)}" data-action="${escapeHtml(item.action)}">${escapeHtml(item.label)}</button>`;
+        }).join("")}
         <button class="soft-button ghost" data-action="lessons">講座一覧へ戻る</button>
       </div>
       <div class="lesson-finish-illustration">
@@ -1043,8 +1049,14 @@ function renderHelp() {
       </div>
 
       <div class="panel help-panel">
+        <h2>NDC講座</h2>
+        <p>全10講で、NDCの基本的な考え方を司書さんと一緒に学べます。読み終えた講座には完了マークがつき、進み具合はこの端末のブラウザに保存されます。</p>
+      </div>
+
+      <div class="panel help-panel">
         <h2>NDCを確認</h2>
         <p>3桁の数字を選んで分類を絞り込めます。「図書館」や「日本文学」など、知りたいことばからも検索できます。</p>
+        <p>クイズ・トレーニング・分類表には、「日本十進分類法 新訂9版」のデータを使用しています。</p>
       </div>
 
       <div class="panel help-panel">
@@ -1418,6 +1430,10 @@ app.addEventListener("click", (event) => {
   }
   if (target.dataset.lessonId) {
     startLesson(target.dataset.lessonId);
+    return;
+  }
+  if (target.dataset.nextLessonId) {
+    startLesson(target.dataset.nextLessonId);
     return;
   }
   if (target.dataset.miniAnswer) {

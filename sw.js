@@ -1,11 +1,11 @@
-const CACHE_NAME = "ndc-quiz-v23-lesson-tap";
+const CACHE_NAME = "ndc-quiz-v26-list-note";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./lesson_data.js?v=20260907-lesson-tap",
-  "./app.js?v=20260907-lesson-tap",
-  "./style.css?v=20260907-lesson-tap",
+  "./lesson_data.js?v=20260907-list-note",
+  "./app.js?v=20260907-list-note",
+  "./style.css?v=20260907-list-note",
   "./manifest.webmanifest",
   "./ndc.json",
   "./images/favicon.ico",

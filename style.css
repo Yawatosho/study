@@ -251,6 +251,15 @@ input {
   min-width: 0;
 }
 
+.home-credit-details span {
+  min-width: 0;
+  text-wrap: balance;
+}
+
+.home-credit-details .home-credit-edition {
+  white-space: nowrap;
+}
+
 .games-link {
   display: inline-flex;
   align-items: center;
@@ -1054,15 +1063,6 @@ input {
   color: #667b5e;
   font-size: 14px;
   font-weight: 900;
-}
-
-.lesson-list-note {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.6;
-  text-align: center;
 }
 
 .lesson-screen {
