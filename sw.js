@@ -1,12 +1,12 @@
-const CACHE_NAME = "ndc-quiz-v39-result-flow";
+const CACHE_NAME = "ndc-quiz-v43-primary-division";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./lesson_data.js?v=20260907-result-flow",
-  "./app.js?v=20260907-result-flow",
-  "./style.css?v=20260907-result-flow",
-  "./manifest.webmanifest?v=20260907-result-flow",
+  "./lesson_data.js?v=20260907-primary-division3",
+  "./app.js?v=20260907-primary-division3",
+  "./style.css?v=20260907-primary-division3",
+  "./manifest.webmanifest?v=20260907-primary-division3",
   "./ndc.json",
   "./images/favicon.ico",
   "./images/apple-touch-icon.png",

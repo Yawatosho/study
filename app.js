@@ -213,7 +213,10 @@ function shouldPlayButtonSound(target) {
 async function init() {
   try {
     const response = await fetch("ndc.json");
-    state.ndc = await response.json();
+    const ndcData = await response.json();
+    state.ndc = ndcData.some((item) => item.ndc === "000")
+      ? ndcData
+      : [{ ndc: "000", subject: "総記" }, ...ndcData];
   } catch {
     app.innerHTML = `<section class="screen"><h1 class="section-title">NDCデータを読み込めませんでした</h1></section>`;
     return;
@@ -618,6 +621,7 @@ function renderOptions(mode) {
   state.mode = mode;
   if (isEnteringOptions) playSound(AUDIO.modeSelect, "voice");
   const isTraining = mode === "training";
+  const isPrimaryDivision = state.division === "primary";
   if (isTraining) unlockGalleryItem("images/training.webp");
   app.innerHTML = `
     <section class="screen options-screen ${isTraining ? "training-options-screen scroll-screen" : "quiz-options-screen"}">
@@ -634,15 +638,16 @@ function renderOptions(mode) {
       </div>
       <div class="panel">
         <h2>区分</h2>
-        <div class="segmented" data-option-group="division">
+        <div class="segmented division-options" data-option-group="division">
+          <button class="option-button ${isPrimaryDivision ? "is-selected" : ""}" data-division="primary">一次区分</button>
           <button class="option-button ${state.division === "secondary" ? "is-selected" : ""}" data-division="secondary">二次区分</button>
           <button class="option-button ${state.division === "tertiary" ? "is-selected" : ""}" data-division="tertiary">三次区分</button>
         </div>
-        <label class="check-option">
-          <input type="checkbox" data-hard-mode ${state.hardMode ? "checked" : ""}>
+        <label class="check-option ${isPrimaryDivision ? "is-disabled" : ""}">
+          <input type="checkbox" data-hard-mode ${state.hardMode && !isPrimaryDivision ? "checked" : ""} ${isPrimaryDivision ? "disabled" : ""}>
           <span class="check-option-text" tabindex="0">
             激ムズ
-            <span class="option-tooltip" role="tooltip">選択肢がすべて同じ類から出題されるようになります</span>
+            <span class="option-tooltip" role="tooltip">${isPrimaryDivision ? "一次区分では選択できません" : "選択肢がすべて同じ類から出題されるようになります"}</span>
           </span>
         </label>
       </div>
@@ -656,18 +661,22 @@ function renderOptions(mode) {
 }
 
 function renderClassSelector() {
+  const isPrimaryDivision = state.division === "primary";
   const allSelected = areAllClassesSelected();
   return `
-    <div class="panel">
+    <div class="panel training-range-panel ${isPrimaryDivision ? "is-fixed-range" : ""}">
       <div class="panel-heading-row">
         <h2>出題範囲</h2>
-        <button class="range-select-all" data-action="toggle-all-classes">${allSelected ? "すべて解除" : "すべて選択"}</button>
+        ${isPrimaryDivision
+          ? `<span class="range-fixed-label">0〜9類すべて</span>`
+          : `<button class="range-select-all" data-action="toggle-all-classes">${allSelected ? "すべて解除" : "すべて選択"}</button>`}
       </div>
-      <div class="range-grid">
+      ${isPrimaryDivision ? `<p class="range-fixed-note">一次区分では、すべての類から出題します。</p>` : ""}
+      <div class="range-grid" ${isPrimaryDivision ? `aria-label="一次区分の出題範囲（0〜9類すべて）"` : ""}>
         ${Array.from({ length: 10 }, (_, index) => {
           const key = String(index);
-          const isSelected = state.selectedClasses.has(key);
-          return `<button class="class-toggle ${isSelected ? "is-selected" : ""}" data-class="${key}" aria-pressed="${isSelected}">${key}類</button>`;
+          const isSelected = isPrimaryDivision || state.selectedClasses.has(key);
+          return `<button class="class-toggle ${isSelected ? "is-selected" : ""}" data-class="${key}" aria-pressed="${isSelected}" ${isPrimaryDivision ? "disabled" : ""}>${key}類</button>`;
         }).join("")}
       </div>
     </div>
@@ -680,10 +689,12 @@ function areAllClassesSelected() {
 }
 
 function updateClassSelector() {
+  const isPrimaryDivision = state.division === "primary";
   for (const button of app.querySelectorAll("[data-class]")) {
-    const isSelected = state.selectedClasses.has(button.dataset.class);
+    const isSelected = isPrimaryDivision || state.selectedClasses.has(button.dataset.class);
     button.classList.toggle("is-selected", isSelected);
     button.setAttribute("aria-pressed", String(isSelected));
+    button.disabled = isPrimaryDivision;
   }
   const toggleAllButton = app.querySelector("[data-action='toggle-all-classes']");
   if (toggleAllButton) toggleAllButton.textContent = areAllClassesSelected() ? "すべて解除" : "すべて選択";
@@ -691,7 +702,8 @@ function updateClassSelector() {
 
 function startQuiz(mode) {
   const pool = getPool();
-  const playablePool = state.hardMode ? getHardModePool(pool) : pool;
+  const hardMode = state.hardMode && state.division !== "primary";
+  const playablePool = hardMode ? getHardModePool(pool) : pool;
   if (playablePool.length < 4) {
     showNotice("選べるNDCが少なすぎます。出題範囲を広げてください。", () => renderOptions(mode));
     return;
@@ -703,7 +715,7 @@ function startQuiz(mode) {
     current: 0,
     correct: 0,
     streak: 0,
-    hardMode: state.hardMode,
+    hardMode,
     answered: false,
     activeItem: null,
     pool: playablePool,
@@ -713,14 +725,17 @@ function startQuiz(mode) {
   trackEvent(mode === "quiz" ? "quiz_start" : "training_start", {
     question_direction: state.direction,
     ndc_division: state.division,
-    hard_mode: state.hardMode,
-    selected_class_count: state.selectedClasses.size,
+    hard_mode: hardMode,
+    selected_class_count: mode === "training" && state.division === "primary" ? 10 : state.selectedClasses.size,
   });
 
   if (mode === "training") {
     const records = readRecords();
     records.training.plays += 1;
-    for (const classKey of state.selectedClasses) records.training.byClass[classKey] += 1;
+    const trainingClasses = state.division === "primary"
+      ? Array.from({ length: 10 }, (_, index) => String(index))
+      : state.selectedClasses;
+    for (const classKey of trainingClasses) records.training.byClass[classKey] += 1;
     writeRecords(records);
   }
 
@@ -762,10 +777,24 @@ function startMistakeReview() {
 
 function getPool() {
   return state.ndc.filter((item) => {
-    const divisionOk = state.division === "tertiary" || item.ndc.endsWith("0");
-    const classOk = state.mode !== "training" || state.selectedClasses.has(item.ndc[0]);
+    const divisionOk = matchesDivision(item, state.division);
+    const classOk = state.mode !== "training"
+      || state.division === "primary"
+      || state.selectedClasses.has(item.ndc[0]);
     return divisionOk && classOk;
   });
+}
+
+function matchesDivision(item, division) {
+  if (division === "primary") return item.ndc.endsWith("00");
+  if (division === "secondary") return item.ndc.endsWith("0");
+  return true;
+}
+
+function getDivisionLabel(division) {
+  if (division === "primary") return "一次区分";
+  if (division === "secondary") return "二次区分";
+  return "三次区分";
 }
 
 function getHardModePool(pool) {
@@ -797,7 +826,7 @@ function nextQuestion() {
   if (state.mode === "review") {
     state.direction = state.quiz.activeItem.reviewDirection || "codeToSubject";
     state.division = state.quiz.activeItem.reviewDivision || "tertiary";
-    state.quiz.pool = state.ndc.filter((item) => state.division === "tertiary" || item.ndc.endsWith("0"));
+    state.quiz.pool = state.ndc.filter((item) => matchesDivision(item, state.division));
   }
   state.quiz.activeAnswers = makeAnswers(state.quiz.activeItem);
   state.remaining = QUESTION_SECONDS;
@@ -1022,7 +1051,7 @@ function shareToX() {
   }
   const score = state.quiz?.correct || 0;
   const directionLabel = state.direction === "codeToSubject" ? "NDC→主題" : "主題→NDC";
-  const divisionLabel = state.division === "secondary" ? "二次区分" : "三次区分";
+  const divisionLabel = getDivisionLabel(state.division);
   const modeLabels = [directionLabel, divisionLabel, ...(state.quiz?.hardMode ? ["激ムズ"] : [])].join(" / ");
   const appHashtag = `#${APP_NAME}`;
   const text = `「${APP_NAME}」のクイズモード（${modeLabels}）で${QUIZ_LENGTH}問中${score}問正解しました！\n${appHashtag}`;
@@ -1084,7 +1113,7 @@ function renderHelp() {
 
       <div class="panel help-panel">
         <h2>クイズモード</h2>
-        <p>10問の4択クイズに挑戦します。1問の制限時間は10秒です。「NDC→主題」と「主題→NDC」、二次区分と三次区分を選べます。</p>
+        <p>10問の4択クイズに挑戦します。1問の制限時間は10秒です。「NDC→主題」と「主題→NDC」、一次・二次・三次区分を選べます。</p>
         <p>「激ムズ」では、同じ類の中から4つの選択肢が出るため、じっくり覚えたい方におすすめです。</p>
       </div>
 
@@ -1353,7 +1382,7 @@ function renderMistakes() {
         ${records.mistakes.length ? records.mistakes.map((item) => `
           <div class="mistake-item">
             <div><span class="mistake-code">${item.ndc}</span> ${escapeHtml(item.subject)}</div>
-            <div class="stat-label">${item.direction === "codeToSubject" ? "NDC→主題" : "主題→NDC"} / ${item.division === "secondary" ? "二次区分" : "三次区分"}</div>
+            <div class="stat-label">${item.direction === "codeToSubject" ? "NDC→主題" : "主題→NDC"} / ${getDivisionLabel(item.division)}</div>
           </div>
         `).join("") : `<div class="empty">まだ間違えた問題はありません</div>`}
       </div>
@@ -1573,7 +1602,7 @@ window.addEventListener("keydown", (event) => {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260907-primary-division3").catch(() => {});
   });
 }
 

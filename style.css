@@ -406,6 +406,16 @@ input {
   gap: 8px;
 }
 
+.segmented.division-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.division-options .option-button {
+  min-width: 0;
+  padding-inline: 6px;
+  font-size: clamp(12px, 3.5vw, 14px);
+}
+
 .check-option {
   display: flex;
   align-items: center;
@@ -424,6 +434,14 @@ input {
   height: 20px;
   margin: 0;
   accent-color: #667b5e;
+}
+
+.check-option.is-disabled {
+  opacity: 0.58;
+}
+
+.check-option.is-disabled .check-option-text {
+  cursor: help;
 }
 
 .check-option-text {
@@ -470,6 +488,35 @@ input {
 
 .range-grid {
   grid-template-columns: repeat(5, 1fr);
+}
+
+.range-fixed-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid rgba(102, 123, 94, 0.4);
+  border-radius: 10px;
+  background: rgba(227, 237, 216, 0.72);
+  color: #53634d;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.range-fixed-note {
+  margin: 0 0 9px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.training-range-panel.is-fixed-range .class-toggle:disabled {
+  cursor: default;
+  opacity: 0.7;
+  box-shadow: none;
+  transform: none;
 }
 
 .class-toggle {
