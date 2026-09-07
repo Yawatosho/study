@@ -48,6 +48,7 @@ input {
     linear-gradient(rgba(255, 250, 240, 0.84), rgba(255, 250, 240, 0.94)),
     repeating-linear-gradient(45deg, rgba(216, 188, 139, 0.09), rgba(216, 188, 139, 0.09) 8px, transparent 8px, transparent 18px);
   box-shadow: 0 0 0 1px rgba(117, 92, 55, 0.08), var(--shadow);
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
 }
 
@@ -995,7 +996,6 @@ input {
 
 .lesson-home-button {
   background: #e3edd8;
-  border-color: #667b5e;
 }
 
 .lesson-kicker {
@@ -1008,6 +1008,11 @@ input {
 
 .lesson-list-screen {
   gap: clamp(12px, 2.4svh, 20px);
+}
+
+.lesson-list-screen .lesson-list-heading {
+  font-size: clamp(18px, 5.4vw, 22px);
+  white-space: nowrap;
 }
 
 .lesson-list {
@@ -1071,6 +1076,34 @@ input {
   --lesson-font-heading: 18px;
   gap: clamp(6px, 1.3svh, 10px);
   padding-inline: clamp(10px, 3.5vw, 16px);
+}
+
+.lesson-screen.is-entering .lesson-visual,
+.lesson-screen.is-entering .lesson-dialogue {
+  animation: lesson-page-enter 180ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.lesson-screen.is-entering .lesson-dialogue {
+  animation-delay: 30ms;
+}
+
+@keyframes lesson-page-enter {
+  from {
+    opacity: 0.45;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-screen.is-entering .lesson-visual,
+  .lesson-screen.is-entering .lesson-dialogue {
+    animation: none;
+  }
 }
 
 .lesson-screen p,

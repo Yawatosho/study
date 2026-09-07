@@ -6,6 +6,10 @@ const QUESTION_SECONDS = 10;
 const MAX_MISTAKES = 20;
 const NDC_DIGIT_OPTIONS = ["any", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const LECTURE_CHARACTERS = Array.from({ length: 4 }, (_, index) => `images/lecture0${index + 1}.webp`);
+const LECTURE_GALLERY_ITEMS = [
+  ...LECTURE_CHARACTERS.map((src, index) => ({ src, label: `NDC講座の司書さん ${index + 1}` })),
+  { src: "images/lecture_end.webp", label: "NDC講座の修了イラスト" },
+];
 const QUIZ_CHARACTERS = [
   { src: "images/quiz_chara_1.webp", label: "司書さん 1" },
   { src: "images/quiz_chara_2.webp", label: "司書さん 2" },
@@ -35,7 +39,13 @@ const MODE_GALLERY_ITEMS = [
   { src: "images/ndc.webp", label: "NDCを確認" },
   { src: "images/training.webp", label: "トレーニングモード" },
 ];
-const GALLERY_ITEMS = [...QUIZ_CHARACTERS, ...QUIZ_RESULTS, ...QUIZ_HARD_RESULTS, ...MODE_GALLERY_ITEMS];
+const GALLERY_ITEMS = [
+  ...QUIZ_CHARACTERS,
+  ...LECTURE_GALLERY_ITEMS,
+  ...QUIZ_RESULTS,
+  ...QUIZ_HARD_RESULTS,
+  ...MODE_GALLERY_ITEMS,
+];
 const GA_VIEW_TITLES = {
   home: "ホーム",
   "quiz-options": "クイズ設定",
@@ -301,7 +311,7 @@ function renderLessonList() {
       <div class="top-bar">
         <div>
           <div class="lesson-kicker">NDCの基本を学ぼう</div>
-          <h1 class="section-title">司書さんと覚える</h1>
+          <h1 class="section-title lesson-list-heading">司書さんと覚えるNDC講座</h1>
         </div>
         <button class="soft-button small ghost" data-action="home">戻る</button>
       </div>
@@ -332,7 +342,7 @@ function getActiveLesson() {
   return LESSONS.find((lesson) => lesson.id === state.lesson?.id);
 }
 
-function renderLesson() {
+function renderLesson({ animate = true } = {}) {
   const lesson = getActiveLesson();
   if (!lesson) {
     renderLessonList();
@@ -344,10 +354,11 @@ function renderLesson() {
   const isLast = state.lesson.page === lesson.pages.length - 1;
   const needsAnswer = page.visual.type === "mini-question" && !state.lesson.answer;
   const characterSrc = chooseLectureCharacter();
+  unlockGalleryItem(characterSrc);
   const lessonMessages = getLessonMessages(page);
   const hasLongMessage = lessonMessages.join("").length >= 70;
   app.innerHTML = `
-    <section class="screen lesson-screen">
+    <section class="screen lesson-screen ${animate ? "is-entering" : ""}">
       <header class="lesson-header">
         <button class="lesson-icon-button" data-action="lessons" aria-label="講座一覧へ戻る">‹</button>
         <div class="lesson-heading">
@@ -558,13 +569,14 @@ function answerMiniQuestion(answer) {
   if (page?.visual.type !== "mini-question") return;
   state.lesson.answer = answer;
   state.lesson.answeredCorrectly = answer === page.visual.answer;
-  renderLesson();
+  renderLesson({ animate: false });
 }
 
 function finishLesson() {
   const lesson = getActiveLesson();
   if (!lesson) return;
   completeLesson(lesson.id);
+  unlockGalleryItem("images/lecture_end.webp");
   setView("lesson");
   const finishActions = Array.isArray(lesson.finishActions) ? lesson.finishActions : [];
   const lessonIndex = LESSONS.findIndex((candidate) => candidate.id === lesson.id);
