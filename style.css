@@ -1224,7 +1224,7 @@ input {
   border: 3px solid #846b4c;
   border-radius: var(--spine-radius);
   background: #b9cba8;
-  box-shadow: inset 7px 0 rgba(75, 64, 51, 0.12), 5px 7px 0 rgba(87, 68, 39, 0.1);
+  box-shadow: 5px 7px 0 rgba(87, 68, 39, 0.1);
 }
 
 .spine-label {
@@ -1347,10 +1347,9 @@ input {
   display: grid;
   place-items: center;
   min-height: clamp(46px, 7svh, 62px);
-  border: 2px solid var(--line);
-  border-radius: 12px;
-  background: var(--paper);
-  box-shadow: 0 3px 0 #c7b58f;
+  border: 1px solid rgba(111, 95, 73, 0.22);
+  border-radius: 8px;
+  background: rgba(234, 223, 200, 0.46);
   font-size: clamp(14px, 4.5vw, 19px);
   font-weight: 900;
 }
@@ -1444,7 +1443,7 @@ input {
   border: 3px double #8a765c;
   border-radius: 18px;
   background: #fff6dc;
-  box-shadow: 7px 8px 0 rgba(217, 181, 109, 0.28);
+  box-shadow: 0 10px 24px rgba(87, 68, 39, 0.08);
 }
 
 .special-class-card strong {
@@ -1475,7 +1474,7 @@ input {
   border: 3px double #8a765c;
   border-radius: 20px;
   background: #fff6dc;
-  box-shadow: 7px 8px 0 rgba(217, 181, 109, 0.28);
+  box-shadow: 0 10px 24px rgba(87, 68, 39, 0.08);
 }
 
 .lesson-hero-card strong {
@@ -1522,10 +1521,9 @@ input {
   min-width: 0;
   min-height: clamp(64px, 9svh, 82px);
   padding: 8px;
-  border: 2px solid var(--line);
-  border-radius: 13px;
-  background: rgba(255, 250, 240, 0.92);
-  box-shadow: 0 3px 0 #c7b58f;
+  border: 1px solid rgba(111, 95, 73, 0.24);
+  border-radius: 10px;
+  background: rgba(255, 250, 240, 0.78);
   text-align: center;
 }
 
@@ -1693,7 +1691,6 @@ input {
   border: 2px solid #846b4c;
   border-radius: 8px 8px 3px 3px;
   background: #b9cba8;
-  box-shadow: inset 5px 0 rgba(75, 64, 51, 0.1);
   text-align: center;
 }
 

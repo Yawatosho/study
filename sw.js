@@ -1,11 +1,11 @@
-const CACHE_NAME = "ndc-quiz-v35-feedback-wrap";
+const CACHE_NAME = "ndc-quiz-v37-flat-info-cards";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./lesson_data.js?v=20260907-feedback-wrap",
-  "./app.js?v=20260907-feedback-wrap",
-  "./style.css?v=20260907-feedback-wrap",
+  "./lesson_data.js?v=20260907-flat-info-cards",
+  "./app.js?v=20260907-flat-info-cards",
+  "./style.css?v=20260907-flat-info-cards",
   "./manifest.webmanifest",
   "./ndc.json",
   "./images/favicon.ico",
