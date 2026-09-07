@@ -1,12 +1,12 @@
-const CACHE_NAME = "ndc-quiz-v37-flat-info-cards";
+const CACHE_NAME = "ndc-quiz-v39-result-flow";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./lesson_data.js?v=20260907-flat-info-cards",
-  "./app.js?v=20260907-flat-info-cards",
-  "./style.css?v=20260907-flat-info-cards",
-  "./manifest.webmanifest",
+  "./lesson_data.js?v=20260907-result-flow",
+  "./app.js?v=20260907-result-flow",
+  "./style.css?v=20260907-result-flow",
+  "./manifest.webmanifest?v=20260907-result-flow",
   "./ndc.json",
   "./images/favicon.ico",
   "./images/apple-touch-icon.png",

@@ -656,17 +656,37 @@ function renderOptions(mode) {
 }
 
 function renderClassSelector() {
+  const allSelected = areAllClassesSelected();
   return `
     <div class="panel">
-      <h2>出題範囲</h2>
+      <div class="panel-heading-row">
+        <h2>出題範囲</h2>
+        <button class="range-select-all" data-action="toggle-all-classes">${allSelected ? "すべて解除" : "すべて選択"}</button>
+      </div>
       <div class="range-grid">
         ${Array.from({ length: 10 }, (_, index) => {
           const key = String(index);
-          return `<button class="class-toggle ${state.selectedClasses.has(key) ? "is-selected" : ""}" data-class="${key}">${key}類</button>`;
+          const isSelected = state.selectedClasses.has(key);
+          return `<button class="class-toggle ${isSelected ? "is-selected" : ""}" data-class="${key}" aria-pressed="${isSelected}">${key}類</button>`;
         }).join("")}
       </div>
     </div>
   `;
+}
+
+function areAllClassesSelected() {
+  return Array.from({ length: 10 }, (_, index) => String(index))
+    .every((classKey) => state.selectedClasses.has(classKey));
+}
+
+function updateClassSelector() {
+  for (const button of app.querySelectorAll("[data-class]")) {
+    const isSelected = state.selectedClasses.has(button.dataset.class);
+    button.classList.toggle("is-selected", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
+  }
+  const toggleAllButton = app.querySelector("[data-action='toggle-all-classes']");
+  if (toggleAllButton) toggleAllButton.textContent = areAllClassesSelected() ? "すべて解除" : "すべて選択";
 }
 
 function startQuiz(mode) {
@@ -908,6 +928,9 @@ function finishQuiz() {
   records.quiz.total += QUIZ_LENGTH;
   if (score === QUIZ_LENGTH) records.quiz.perfects += 1;
   writeRecords(records);
+  const hasReviewableMistakes = records.mistakes.some((mistake) =>
+    state.ndc.some((item) => item.ndc === mistake.ndc)
+  );
 
   const resultKey = score <= 2
     ? "low"
@@ -940,13 +963,15 @@ function finishQuiz() {
   });
 
   app.innerHTML = `
-    <section class="screen result-screen">
+    <section class="screen result-screen quiz-result-screen">
       <h1 class="section-title">結果</h1>
       <img class="result-art" src="${resultImage}" alt="">
       <div class="score">${score}/${QUIZ_LENGTH}</div>
       <p class="speech">${resultSpeech(score)}</p>
-      <div class="menu-stack">
-        <button class="soft-button primary" data-action="share-x">Xにポスト</button>
+      <div class="menu-stack result-actions">
+        <button class="soft-button primary result-action-main" data-action="replay-quiz">同じ条件でもう一度</button>
+        ${hasReviewableMistakes ? `<button class="soft-button accent result-action-review" data-action="start-mistake-review">間違えた問題を復習</button>` : ""}
+        <button class="soft-button ghost" data-action="share-x">Xにポスト</button>
         <button class="soft-button ghost" data-action="home">スタート画面へ</button>
       </div>
     </section>
@@ -1434,7 +1459,7 @@ app.addEventListener("click", (event) => {
     } else {
       state.selectedClasses.add(classKey);
     }
-    renderOptions("training");
+    updateClassSelector();
     return;
   }
   if (target.dataset.ndcChoice) {
@@ -1483,7 +1508,16 @@ app.addEventListener("click", (event) => {
   if (action === "ndc-lookup") renderNdcLookup();
   if (action === "mistakes") renderMistakes();
   if (action === "start-quiz") startQuiz("quiz");
+  if (action === "replay-quiz") startQuiz("quiz");
   if (action === "start-training") startQuiz("training");
+  if (action === "toggle-all-classes") {
+    if (areAllClassesSelected()) {
+      state.selectedClasses.clear();
+    } else {
+      for (let index = 0; index < 10; index += 1) state.selectedClasses.add(String(index));
+    }
+    updateClassSelector();
+  }
   if (action === "start-mistake-review") startMistakeReview();
   if (action === "next-question") nextQuestion();
   if (action === "quit-quiz") renderHome();

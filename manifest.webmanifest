@@ -1,8 +1,8 @@
 {
   "id": "./",
   "name": "司書さんと覚える日本十進分類",
-  "short_name": "NDCクイズ",
-  "description": "司書さんと一緒に日本十進分類を覚えるクイズゲーム",
+  "short_name": "NDCを覚える",
+  "description": "司書さんと一緒に、講座・トレーニング・クイズで日本十進分類を楽しく学べるアプリ",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",

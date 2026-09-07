@@ -78,9 +78,6 @@ const LESSONS = [
   {
     id: 3,
     title: "数字はだんだん細かくなる",
-    finishActions: [
-      { action: "training-options", label: "0〜9類を練習してみる", kind: "primary" },
-    ],
     pages: [
       {
         visual: { type: "sequence", items: ["4", "49", "493"] },
