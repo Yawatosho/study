@@ -385,6 +385,7 @@ function renderLesson({ animate = true } = {}) {
       </section>
     </section>
   `;
+  compactLessonMessagesIfNeeded(lessonMessages);
 }
 
 function advanceLesson() {
@@ -422,8 +423,15 @@ function getLessonMessages(page) {
   return messages;
 }
 
-function renderLessonMessages(messages) {
+function renderLessonMessages(messages, { compact = false } = {}) {
+  if (compact) return `<p>${messages.map((message) => escapeHtml(message)).join("")}</p>`;
   return messages.map((message) => `<p>${escapeHtml(message)}</p>`).join("");
+}
+
+function compactLessonMessagesIfNeeded(messages) {
+  const container = app.querySelector(".lesson-messages");
+  if (!container || container.scrollHeight <= container.clientHeight + 1) return;
+  container.innerHTML = renderLessonMessages(messages, { compact: true });
 }
 
 function renderLessonVisual(visual) {

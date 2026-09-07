@@ -1823,7 +1823,14 @@ input {
   justify-items: center;
   gap: clamp(6px, 1.2svh, 10px);
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   margin: auto;
+}
+
+.mini-question > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .mini-question-heading {
@@ -1872,6 +1879,7 @@ input {
 }
 
 .mini-question h2 {
+  width: 100%;
   margin: 0;
   font-size: var(--lesson-font-heading);
   text-align: center;
@@ -1879,7 +1887,10 @@ input {
 
 .mini-question h2 span {
   display: block;
-  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: wrap;
+  white-space: normal;
 }
 
 .mini-choice-grid {
@@ -1887,6 +1898,7 @@ input {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   width: 100%;
+  min-width: 0;
 }
 
 .mini-choice-grid.choices-3 {
@@ -1925,11 +1937,20 @@ input {
   display: grid;
   gap: 2px;
   width: 100%;
+  min-width: 0;
   padding: 7px 10px;
   border: 1px solid;
   border-radius: 11px;
   font-size: var(--lesson-font-small);
   line-height: 1.35;
+}
+
+.mini-question .mini-feedback strong,
+.mini-question .mini-feedback span {
+  line-break: strict;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: wrap;
 }
 
 .mini-feedback.is-correct {
@@ -1998,7 +2019,10 @@ input {
   font-size: var(--lesson-font-body);
   font-weight: 800;
   line-height: 1.4;
-  text-wrap: pretty;
+  line-break: strict;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: wrap;
 }
 
 .lesson-messages.is-long p {
